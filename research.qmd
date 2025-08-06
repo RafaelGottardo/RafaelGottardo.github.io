@@ -12,11 +12,11 @@ title: "Research"
 
 ### Academic Publications
 
--   “Housing, Healthcare, and More: Decoding the 2022 Ontario General Election” Accepted in **The Canadian Political Science Review**, with Andrea Perrella & Simon Kiss.
+“Housing, Healthcare, and More: Decoding the 2022 Ontario General Election” Accepted in **The Canadian Political Science Review**, with Andrea Perrella & Simon Kiss.
 
 ## Software
 
-- Campos-Gottardo, R. & Kiss, S. (2025). Occupations Qualtrics Module for Canadian Political Science Surveys. GitHub repository: [https://github.com/RafaelGottardo/occupations-qualtrics](https://github.com/RafaelGottardo/occupations-qualtrics)
+Campos-Gottardo, R. & Kiss, S. (2025). Occupations Qualtrics Module for Canadian Political Science Surveys. GitHub repository: [https://github.com/RafaelGottardo/occupations-qualtrics](https://github.com/RafaelGottardo/occupations-qualtrics)
 
 [Github](https://github.com/RafaelGottardo/occupations-qualtrics){.btn .btn-outline-primary .btn role="button"}
 
@@ -24,26 +24,26 @@ title: "Research"
 
 ### Papers
 
-- Arp, M., **Campos-Gottardo, R.**, Gravelle, T., Kiss, S., Piscitelli, A., & Spicer, Z. (authors in alphabetical order) (2025, June). Do appeals to benefits overcome NIMBY-ISM?. Paper presented at the **Canadian Political Science Association’s Annual Conference**, Toronto, ON.
+Arp, M., **Campos-Gottardo, R.**, Gravelle, T., Kiss, S., Piscitelli, A., & Spicer, Z. (authors in alphabetical order) (2025, June). Do appeals to benefits overcome NIMBY-ISM?. Paper presented at the **Canadian Political Science Association’s Annual Conference**, Toronto, ON.
 
-- Erlich, A., Stolle, D., \& **Campos-Gottardo, R.** (2024, June). Civic Engagement in Rebuilding Ukraine: Observational and Experimental Evidence. Paper presented at the **Canadian Political Science Association's Annual Conference**, Montreal, QC. 
+Erlich, A., Stolle, D., \& **Campos-Gottardo, R.** (2024, June). Civic Engagement in Rebuilding Ukraine: Observational and Experimental Evidence. Paper presented at the **Canadian Political Science Association's Annual Conference**, Montreal, QC. 
 
-- **Campos-Gottardo, R.** \& Kiss, S. (2024, June). Social Media Use and Polarization in Ontario: 2018 Case Study. Paper presented at the **Canadian Political Science Association's Annual Conference**, Montreal, QC. 
+**Campos-Gottardo, R.** \& Kiss, S. (2024, June). Social Media Use and Polarization in Ontario: 2018 Case Study. Paper presented at the **Canadian Political Science Association's Annual Conference**, Montreal, QC. 
 
-- **Campos-Gottardo, R.** (2024, January). Correlates of Populist Attitudes in Canada: Evidence from the CES. Paper presented at the **Bell Chair Graduate Student Conference**, Ottawa, ON. 
+**Campos-Gottardo, R.** (2024, January). Correlates of Populist Attitudes in Canada: Evidence from the CES. Paper presented at the **Bell Chair Graduate Student Conference**, Ottawa, ON. 
 
 [Paper](files/presentations/confpapers/bellchair2024.pdf){.btn .btn-outline-primary .btn role="button"} [Slides](files/presentations/slides/bellchair2024.html){.btn .btn-outline-primary .btn role="button"}
 
-- **Campos-Gottardo, R.** (2022, August). Populism and authoritarianism during the COVID-19 pandemic: The case of Nayib Bukele in El Salvador. Paper presented at the annual **Congress of the Canadian Association for Latin American and Caribbean Studies**, Toronto, ON.
+**Campos-Gottardo, R.** (2022, August). Populism and authoritarianism during the COVID-19 pandemic: The case of Nayib Bukele in El Salvador. Paper presented at the annual **Congress of the Canadian Association for Latin American and Caribbean Studies**, Toronto, ON.
 
 [Slides](files/presentations/slides/calacs2022.pdf){.btn .btn-outline-primary .btn role="button"} 
 
 ### Posters
 
-- Lehecka, N., Thomson, B., **Campos-Gottardo, R.**, & Kiss, S. (2025, June). Did The Ford Government Suffer Any Electoral Backlash From the Laurentian University Bankruptcy? Poster presented at the **Canadian Political Science Association**, Toronto, ON.
+Lehecka, N., Thomson, B., **Campos-Gottardo, R.**, & Kiss, S. (2025, June). Did The Ford Government Suffer Any Electoral Backlash From the Laurentian University Bankruptcy? Poster presented at the **Canadian Political Science Association**, Toronto, ON.
 
 
-- **Campos-Gottardo, R.** & Perrella, A. (2023, May). The Role of Populist Attitudes on Support for Centrist Populist Candidates: Evidence From El Salvador. Poster presented at the **Canadian Political Science Association’s Annual Conference**, Toronto, ON.
+**Campos-Gottardo, R.** & Perrella, A. (2023, May). The Role of Populist Attitudes on Support for Centrist Populist Candidates: Evidence From El Salvador. Poster presented at the **Canadian Political Science Association’s Annual Conference**, Toronto, ON.
 
 
 [Poster](files/presentations/posters/cpsa2023.pdf){.btn .btn-outline-primary .btn role="button"} 
