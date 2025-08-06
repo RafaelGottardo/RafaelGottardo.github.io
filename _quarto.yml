@@ -6,8 +6,8 @@ website:
   title: "Rafael Campos-Gottardo"
   navbar:
     tools:
-        - icon: twitter
-          href: https://x.com/rafaelgottardo
+        - icon: linkedin
+          href: https://www.linkedin.com/in/rafael-campos-gottardo/
         - icon: github
           href: https://github.com/RafaelGottardo
     right:
