@@ -19,7 +19,9 @@ During my graduate and undergraduate degrees I acquired extensive experience tea
 [R Guides](files/teaching/lab_materials/POLI311_2025_labs.pdf){.btn .btn-outline-primary .btn role="button"} 
 [Reviews 2024](files/teaching/reviews/POLI311-2024.pdf){.btn .btn-outline-primary .btn role="button"} 
 [Reviews 2025](files/teaching/reviews/POLI311-2025.pdf){.btn .btn-outline-primary .btn role="button"} 
+
 - CDSI/CSDC - R Summer Camp August **2024 & 2025**
+
 - POLI210 - Political Science Research Methods - **Fall 2024**
 
 
