@@ -4,9 +4,17 @@ title: "Teaching"
 
 During my graduate and undergraduate degrees I acquired extensive experience teaching quantitative research methods. Below is a list of courses I have TAed and guest lectures I have given along with teaching reviews and materials prepared for the classes. 
 
+### R Guides
+
+- [Getting Started in R](files/teaching/lab_materials/getting_started.pdf)
+- [Working with Data in R](files/teaching/lab_materials/lab2_working_with_data.pdf)
+- [Linear Regression in R](files/teaching/lab_materials/Lab-3---Linear-Regression.pdf)
+- [Visualing Regression in R](files/teaching/lab_materials/ggplot_for_regression.pdf)
+- [Advanced Regression in R](files/teaching/lab_materials/Advanced_Regression-2.pdf)
+
 ### Guest Lectures
 
-- PO479 - Wilfrid Laurier University (Quantitative Casual Inference)
+PO479 - Wilfrid Laurier University (Quantitative Casual Inference)
 
 [Slides](files/teaching/slides/Introduction_to_Quantitative_Causal_Inference.pdf){.btn .btn-outline-primary .btn role="button"} 
 
@@ -14,15 +22,16 @@ During my graduate and undergraduate degrees I acquired extensive experience tea
 
 #### McGill University 
 
-- POLI311 - Introduction to Quantitative Methods - **Winter 2024 & 2025**
 
-[R Guides](files/teaching/lab_materials/POLI311_2025_labs.pdf){.btn .btn-outline-primary .btn role="button"} 
+POLI311 - Introduction to Quantitative Methods - **Winter 2024 & 2025**
+
 [Reviews 2024](files/teaching/reviews/POLI311-2024.pdf){.btn .btn-outline-primary .btn role="button"} 
 [Reviews 2025](files/teaching/reviews/POLI311-2025.pdf){.btn .btn-outline-primary .btn role="button"} 
 
-- CDSI/CSDC - R Summer Camp August **2024 & 2025**
 
-- POLI210 - Political Science Research Methods - **Fall 2024**
+CDSI/CSDC - R Summer Camp August **2024 & 2025**
+
+POLI210 - Political Science Research Methods - **Fall 2024**
 
 
 [Reviews](files/teaching/reviews/POLI210-2024.pdf){.btn .btn-outline-primary .btn role="button"} 
