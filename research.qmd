@@ -4,7 +4,8 @@ title: "Research"
 
 ## Current Projects
 
--   “War Fatigue” with Aaron Erlich & Dietlind Stolle.
+-   “War Fatigue” with Aaron Erlich.
+- "Assigning National Occupation Classification Codes To Open-Ended Responses in the 2019 and 2021 Canada Election Studies" with Simon Kiss.
 -   “Civic Engagement in Rebuilding Ukraine: Observational and Experimental Evidence” with Aaron Erlich & Dietlind Stolle.
 
 ## Publications
