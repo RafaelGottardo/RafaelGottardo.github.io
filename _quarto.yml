@@ -15,7 +15,6 @@ website:
         text: Home
       - research.qmd
       - teaching.qmd
-      - conferences.qmd
 
 format:
   html:

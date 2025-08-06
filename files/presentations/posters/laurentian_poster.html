@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="generator" content="pandoc" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<!--
+Font-awesome icons ie github or twitter
+-->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/brands.css" integrity="sha384-n9+6/aSqa9lBidZMRCQHTHKJscPq6NW4pCQBiMmHdUCvPN8ZOg2zJJTkC7WIezWv" crossorigin="anonymous">
+
+<!--
+Google fonts api stuff
+-->
+
+
+
+<title>Did The Ontario Progressive Conservatives Suffer Any Electoral Backlash From The Laurentian University Bankruptcy</title>
+
+
+<script src="laurentian_poster_files/kePrint-0.0.1/kePrint.js"></script>
+<link href="laurentian_poster_files/lightable-0.0.1/lightable.css" rel="stylesheet" />
+
+
+
+
+<style>
+@page {
+size: 45in 38in;
+margin: 0;
+padding: 0;
+}
+body {
+margin: 0;
+font-size: 45px;
+width: 45in;
+height: 38in;
+padding: 0;
+text-align: justify;
+font-family: Palatino;
+}
+.poster_wrap {
+width: 45in;
+height: 38in;
+padding: 0cm;
+}
+.title_container {
+width: 45in;
+height: calc(38in * 0.15);
+overflow: hidden;
+background-color: #330072;
+border: 0 solid #0b4545;
+}
+.logo_left {
+float: left;
+width: 10%;
+height: 100%;
+background-color: #330072;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.logo_right {
+float: right;
+width: 10%;
+height: 100%;
+background-color: #330072;
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.poster_title {
+text-align: center;
+position: relative;
+float: left;
+width: 80%;
+height: 100%;
+color: #FFFFFF;
+top: 50%;
+transform: translateY(-50%);
+-webkit-transform: translateY(-50%);
+}
+#title {
+font-family: Palatino;
+}
+/* unvisited link */
+a:link {
+color: #cc0000;
+}
+.mybreak {
+  break-before: column;
+}
+/* visited link */
+a:visited {
+color: #cc0000;
+}
+
+/* mouse over link */
+a:hover {
+color: #cc0000;
+}
+
+/* selected link */
+a:active {
+color: #cc0000;
+}
+.poster_body {
+-webkit-column-count: 3; /* Chrome, Safari, Opera */
+-moz-column-count: 3; /* Firefox */
+column-count: 3;
+-webkit-column-fill: auto;
+-moz-column-fill: auto;
+column-fill: auto;
+-webkit-column-rule-width: 1mm;
+-moz-column-rule-width: 1mm;
+column-rule-width: 1mm;
+-webkit-column-rule-style: dashed;
+-moz-column-rule-style: dashed;
+column-rule-style: dashed;
+-webkit-column-rule-color: #330072;
+-moz-column-rule-color: #330072;
+column-rule-color: #330072;
+column-gap: 1em;
+padding-left: 0.5em;
+padding-right: 0.5em;
+height: 100%;
+color: #000000
+background-color: #ffffff;
+}
+.poster_title h1 {
+font-size: 75pt;
+margin: 0;
+border: 0;
+font-weight: normal;
+}
+.poster_body_wrap{
+width: calc(45in + 0 + 0);
+height: calc(38in * 0.83);
+padding-top: calc(38in * 0.005);
+padding-bottom: calc(38in * 0.01);
+background-color: #ffffff;
+}
+.poster_title h3 {
+color: #ffffff;
+font-size: 50pt;
+margin: 0;
+border: 0;
+font-weight: normal;
+}
+.poster_title h3 > sup {
+  font-size: 35pt;
+  margin-left: 0.02em;
+}
+.poster_title h5 {
+color: #FFFFFF;
+font-size: 35pt;
+margin: 0;
+border: 0;
+font-weight: normal;
+}
+img {
+margin-top: 2cm;
+margin-bottom: 0;
+}
+.section {
+  padding: 0.2em;
+}
+.poster_body h1 {
+text-align: center;
+color: #FFFFFF;
+font-size: 65pt;
+border: 2mm solid #330072;
+background-color: #330072;
+border-radius: 4mm 0mm;
+margin-top: 2mm;
+margin-bottom: 2mm;
+font-weight: normal;
+}
+.poster_body h2 {
+color: #000000;
+font-size: 40pt;
+padding-left: 4mm;
+font-weight: normal;
+}
+.span {
+width: 200%;
+}
+/* center align leaflet map,
+from https://stackoverflow.com/questions/52112119/center-leaflet-in-a-rmarkdown-document */
+.html-widget {
+margin: auto;
+position: sticky;
+margin-top: 2cm;
+margin-bottom: 2cm;
+}
+.leaflet.html-widget.html-widget-static-bound.leaflet-container.leaflet-touch.leaflet-fade-anim.leaflet-grab.leaflet-touch-drag.leaflet-touch-zoom {
+position: sticky;
+width: 100%;
+}
+pre.sourceCode.r {
+background-color: #dddddd40;
+border-radius: 4mm;
+padding: 4mm;
+width: 75%;
+/* align-items: center; */
+margin: auto;
+padding-left: 2cm;
+}
+code.sourceCode.r{
+background-color: transparent;
+font-size: 20pt;
+border-radius: 2mm;
+}
+.caption {
+font-size: 25pt;
+}
+.table caption {
+font-size: 25pt;
+padding-bottom: 3mm;
+
+}
+code {
+font-size: 1em;
+font-family: monospace;
+background-color: #00808024;
+color: #330072;
+padding: 1.2mm;
+border-radius: 2mm;
+}
+.poster_title code {
+font-size: 1em;
+}
+table {
+font-size: 40px;
+margin: auto;
+border-top: 3px solid #666;
+border-bottom: 3px solid #666;
+}
+table thead th {
+border-bottom: 3px solid #ddd;
+}
+td {
+padding: 8px;
+}
+th {
+padding: 15px;
+}
+caption {
+margin-bottom: 10px;
+}
+.poster_body p {
+margin-right: 4mm;
+margin-left: 4mm;
+margin-top: 6mm;
+margin-bottom: 10mm;
+}
+.poster_body ol {
+margin-right: 4mm;
+margin-left: 4mm;
+}
+#ul {
+margin-right: 4mm;
+margin-left: 4mm;
+}
+.references p {
+font-size: 20pt;
+}
+.orcid img {
+  width: 1em;
+}
+</style>
+</head>
+<body>
+
+
+<div class="poster_wrap">
+<div class="title_container">
+<!-- Left Logo  -->
+<div class="logo_left">
+<img src= 'kiss_lehecka_thomson_campos_gottardo_files/lispop_logo.png' style="width: 80%">
+</div>
+<!-- Poster Title -->
+<div class= "poster_title">
+<h1 id="title">Did The Ontario Progressive Conservatives Suffer Any Electoral Backlash From The Laurentian University Bankruptcy</h1>
+<h3 id="author">Simon Kiss<sup>1, <a class="orcid" href="https://orcid.org/0000-0003-1837-5428"><img src="https://raw.githubusercontent.com/brentthorne/posterdown/master/images/orcid.jpg"></a></sup>, Nicole Lehecka<sup>3</sup></h3><br>
+<h5 id="affiliation"><sup>1</sup> Human Rights and Political Science, Wilfrid Laurier University<br> <sup>2</sup> Department of Political Science, McGill University<br> <sup>3</sup> Department of Political Science, Wilfrid Laurier University</h5>
+</div>
+<!-- Right Logo  -->
+<div class="logo_right">
+</div>
+</div>
+
+<div class='poster_body_wrap'>
+<div class='poster_body'>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>In 2021, Laurentian University declared bankruptcy, an unprecedented event for a Canadian public university. In addition to serving the higher education needs for Northern Ontario, Laurentian has had a historically important role educating Franco-Ontarians.</p>
+<div id="research-question" class="section level2">
+<h2>Research Question</h2>
+<p>Is there any evidence the bankruptcy of Laurentian University harmed the electoral prospects of the incumbent PC government.</p>
+</div>
+</div>
+<div id="methods" class="section level1">
+<h1>Methods</h1>
+<p>Individual-level survey data that could shed light on this question is unavailable. It is necessary to rely on aggregate vote data.</p>
+<p>A particular innovation of this project is to use tools developed as part of the <strong>credibility revolution</strong> in the social sciences which features new methods tools for assessing causal effects in observational data.</p>
+<ol style="list-style-type: decimal">
+<li>Differences-in-Differences</li>
+<li>Synthetic Control</li>
+<li>Geographic assessment of electoral results</li>
+</ol>
+<p><br></p>
+</div>
+<div id="challenges" class="section level1">
+<h1>Challenges</h1>
+<p>The research project is severely limited by changing electoral boundaries. Specifically, from 2007 to to 2014, Ontario defined 11 northern districts to increase northern representations with boundaries that did not map onto federal boundaries. This complicates developing demographic profiles of those boundaries, although vote patterns can be compared across time for these districts as the boundaries did not change. However, in 2015, Ontario added two new northern districts from the districts of Timmins-James Bay and Kenora Rainy River to add two new boundaries.</p>
+</div>
+<div id="solutions" class="section level1">
+<h1>Solutions</h1>
+<ol style="list-style-type: decimal">
+<li>The boundaries of Sudbury and Nickel Belt have been unchanged since 2007, allowing meaningful comparison of vote shares of those two ridings across time.</li>
+<li>Because of the two new northern districts only affected the boundaries of two northern districts, the vote shares in Sudbury and Nickel Belt could be compared meaningfully across all other northern and southern districts back to 2007. Those aggregations are identical.</li>
+<li>For the purposes of the synthetic control method, a demographic profile of cases is necessary. While census profiles of southern Ontario districts are readily available because the boundaries of those districts are identical to federal districts, demographic profiles of northern districts must be estimated. Geographers use the method of <em>weighted area interpolation</em> to do this. Luckily, statistical software exists to facilitate</li>
+</ol>
+</div>
+<div id="results" class="section level1">
+<h1>Results</h1>
+<p><strong>Top-Level Pattern</strong></p>
+<div class="figure" style="text-align: center"><span style="display:block;" id="fig:plot1"></span>
+<img src="Poster/southern_northern_ontario.png" alt="PC Vote Share In Southern Ontario, Northern Ontario and Sudbury Nickel-Belt" width="100%" />
+<p class="caption">
+Figure 1: PC Vote Share In Southern Ontario, Northern Ontario and Sudbury Nickel-Belt
+</p>
+</div>
+<div id="differences-in-differences" class="section level3">
+<h3>Differences-in-Differences</h3>
+<p>The differences-in-differences approach compares the limitations .</p>
+<table style="NAborder-bottom: 0; width: auto !important; margin-left: auto; margin-right: auto;" class="table">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:center;">
+Northern Ontario
+</th>
+<th style="text-align:center;">
+All Ontario
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Bankruptcy
+</td>
+<td style="text-align:center;">
+−0.03
+</td>
+<td style="text-align:center;">
+0.08**
+</td>
+</tr>
+<tr>
+<td style="text-align:left;box-shadow: 0px 1.5px">
+</td>
+<td style="text-align:center;box-shadow: 0px 1.5px">
+(0.03)
+</td>
+<td style="text-align:center;box-shadow: 0px 1.5px">
+(0.01)
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Num.Obs.
+</td>
+<td style="text-align:center;">
+56
+</td>
+<td style="text-align:center;">
+569
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+R2
+</td>
+<td style="text-align:center;">
+0.842
+</td>
+<td style="text-align:center;">
+0.873
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+RMSE
+</td>
+<td style="text-align:center;">
+0.06
+</td>
+<td style="text-align:center;">
+0.05
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Std.Errors
+</td>
+<td style="text-align:center;">
+by: District &amp; Year
+</td>
+<td style="text-align:center;">
+by: District &amp; Year
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+FE: District
+</td>
+<td style="text-align:center;">
+X
+</td>
+<td style="text-align:center;">
+X
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+FE: Year
+</td>
+<td style="text-align:center;">
+X
+</td>
+<td style="text-align:center;">
+X
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup></sup> * p &lt; 0.05, ** p &lt; 0.01
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<div id="synthetic-control" class="section level2">
+<h2>Synthetic Control</h2>
+</div>
+<div id="geographic-proximity" class="section level2">
+<h2>Geographic Proximity</h2>
+</div>
+</div>
+<div id="limitations" class="section level1">
+<h1>Limitations</h1>
+</div>
+<div id="references" class="section level1">
+<h1>References</h1>
+</div>
+</div>
+</div>
+
+</div>
+
+
+
+</body>
+</html>
