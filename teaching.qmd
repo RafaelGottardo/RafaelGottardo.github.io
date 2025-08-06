@@ -9,7 +9,7 @@ During my graduate and undergraduate degrees I acquired extensive experience tea
 - [Getting Started in R](files/teaching/lab_materials/getting_started.pdf)
 - [Working with Data in R](files/teaching/lab_materials/lab2_working_with_data.pdf)
 - [Linear Regression in R](files/teaching/lab_materials/Lab-3---Linear-Regression.pdf)
-- [Visualing Regression in R](files/teaching/lab_materials/ggplot_for_regression.pdf)
+- [Visualizing Regression in R](files/teaching/lab_materials/ggplot_for_regression.pdf)
 - [Advanced Regression in R](files/teaching/lab_materials/Advanced_Regression-2.pdf)
 
 ### Guest Lectures
