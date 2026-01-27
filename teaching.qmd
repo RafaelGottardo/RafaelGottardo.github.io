@@ -2,7 +2,7 @@
 title: "Teaching"
 ---
 
-During my graduate and undergraduate degrees I acquired extensive experience teaching quantitative research methods. Below is a list of courses I have TAed and guest lectures I have given along with teaching reviews and materials prepared for the classes. 
+I have extensive experience teaching quantitative research methods. Below is a list of courses I have TAed and guest lectures I have given along with teaching reviews and materials prepared for the classes. 
 
 ### R Guides
 
@@ -12,7 +12,11 @@ During my graduate and undergraduate degrees I acquired extensive experience tea
 - [Visualizing Regression in R](files/teaching/lab_materials/ggplot_for_regression.pdf)
 - [Advanced Regression in R](files/teaching/lab_materials/Advanced_Regression-2.pdf)
 
-### Guest Lectures
+### Workshops & Guest Lectures
+
+Topic Modelling in Political Science - [CSDC/CEDC Winter Methods School](https://csdc-cecd.ca/en/ecole-de-methodologie-2026/)
+
+[Course Materials](https://github.com/RafaelGottardo/Topic-Modelling){.btn .btn-outline-primary .btn role="button"} 
 
 PO479 - Wilfrid Laurier University (Quantitative Casual Inference)
 
@@ -22,16 +26,9 @@ PO479 - Wilfrid Laurier University (Quantitative Casual Inference)
 
 #### McGill University 
 
+CDSI/CSDC - R Summer Camp - **August 2024 & 2025**
 
 POLI311 - Introduction to Quantitative Methods - **Winter 2024 & 2025**
 
-[Reviews 2024](files/teaching/reviews/POLI311-2024.pdf){.btn .btn-outline-primary .btn role="button"} 
-[Reviews 2025](files/teaching/reviews/POLI311-2025.pdf){.btn .btn-outline-primary .btn role="button"} 
-
-
-CDSI/CSDC - R Summer Camp August **2024 & 2025**
-
 POLI210 - Political Science Research Methods - **Fall 2024**
 
-
-[Reviews](files/teaching/reviews/POLI210-2024.pdf){.btn .btn-outline-primary .btn role="button"} 

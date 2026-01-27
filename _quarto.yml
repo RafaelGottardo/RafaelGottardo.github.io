@@ -10,6 +10,8 @@ website:
           href: https://www.linkedin.com/in/rafael-campos-gottardo/
         - icon: github
           href: https://github.com/RafaelGottardo
+        - icon: bluesky
+          href: https://bsky.app/profile/rafaelgottardo.bsky.social 
     right:
       - href: index.qmd
         text: Home
