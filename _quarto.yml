@@ -17,6 +17,7 @@ website:
         text: Home
       - research.qmd
       - teaching.qmd
+      - montreal_election.qmd
 
 format:
   html:

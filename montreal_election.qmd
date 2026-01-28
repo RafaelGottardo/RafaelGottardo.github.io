@@ -1,0 +1,134 @@
+---
+title: "Mapping the 2026 Montreal Election"
+---
+
+```{r echo=FALSE, include=FALSE}
+library(osmdata)
+library(osmextract)
+library(sf)
+library(tidyverse)
+
+votes <- read.csv("data/resultats-detailles-2025.csv")
+
+votes <- votes %>% 
+  filter(Poste == "0,00") 
+
+votes <- votes %>% 
+  mutate(CODE_SECT = paste0(ifelse(str_length(ElectoralDistrictID) > 2, ElectoralDistrictID, paste0("0", ElectoralDistrictID)), "-", Bureau))
+
+votes <- votes %>% 
+  mutate(`Candidate and Party` = paste0(Candidat, " ", Partie))
+
+votes_candidate <- votes %>% 
+  select(Votes, TotalValidVotes, CODE_SECT, `Candidate and Party`, District) %>% 
+  pivot_wider(names_from = `Candidate and Party`, values_from = Votes, id_cols = CODE_SECT)
+
+
+votes_candidate <- votes %>% 
+  distinct(CODE_SECT, .keep_all = TRUE) %>%  
+  select(CODE_SECT, TotalValidVotes, District)  %>% 
+  left_join(., votes_candidate, by = "CODE_SECT")
+
+votes_candidate <- votes_candidate %>% 
+mutate(across(`DUVAL Jean Indépendant`:`SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé`, \(x)round((x / TotalValidVotes)*100)))
+
+winner <- votes_candidate %>% 
+  pivot_longer(cols = c(`DUVAL Jean Indépendant`:`SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé`),
+               names_to = "Canadidate and Party",
+               values_to = "Percentage") %>% 
+  group_by(CODE_SECT) %>% 
+  slice_max(order_by = Percentage, n = 1, with_ties = FALSE) %>%  
+  ungroup()
+
+winner <- votes_candidate %>% 
+  select(CODE_SECT, `DUVAL Jean Indépendant`:`SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé`) %>% 
+  left_join(winner, .,  by = "CODE_SECT")
+
+winner <- winner %>% 
+  mutate(across(`DUVAL Jean Indépendant`:`SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé`, \(x)paste0(x, "%")))
+
+
+winner <- winner %>% 
+  mutate(`Canadidate and Party` = replace(`Canadidate and Party`, TotalValidVotes == 0, NA),
+        `Canadidate and Party` = case_match(`Canadidate and Party`, 
+                                             "RABOUIN Luc Projet Montréal - Équipe Luc Rabouin" ~ "Projet Montréal: Luc Rabouin",
+                                             "MARTINEZ FERRADA Soraya Ensemble Montréal - Équipe Soraya" ~ "Ensemble Montréal: Soraya Martinez Ferrada",
+                                             "THIBODEAU Gilbert Action Montréal - Équipe Gilbert Thibodeau" ~ "Action Montréal: Gilbert Thibodeau",
+                                             "DUVAL Jean Indépendant" ~ "Indépendant: Jean Duval",
+                                             "SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé" ~ "Transition Montréal: Craig Sauvé",
+                                             "KACOU Jean-François Futur Montréal" ~ "Futur Montréal: Jean-François Kacou",
+                                             "LE ROUGETEL Katy Indépendant" ~ "Idépendant: Katy Le Rougetel"
+                                             ))
+
+
+winner <- winner %>% 
+  rename( "Projet Montréal: Luc Rabouin" = "RABOUIN Luc Projet Montréal - Équipe Luc Rabouin",
+           "Ensemble Montréal: Soraya Martinez Ferrada" = "MARTINEZ FERRADA Soraya Ensemble Montréal - Équipe Soraya",
+           "Action Montréal: Gilbert Thibodeau" = "THIBODEAU Gilbert Action Montréal - Équipe Gilbert Thibodeau",
+           "Indépendant: Jean Duval" = "DUVAL Jean Indépendant",
+           "Transition Montréal: Craig Sauvé" = "SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé",
+           "Futur Montréal: Jean-François Kacou" = "KACOU Jean-François Futur Montréal",
+          "Idépendant: Katy Le Rougetel" = "LE ROUGETEL Katy Indépendant")
+
+test <- winner %>% 
+  filter(`Canadidate and Party` == "Indépendant: Jean Duval")
+
+shp <- st_read("data/section-vote-2025/section-vote-2025.shp")
+
+votes_candidate <- shp %>% 
+  left_join(votes_candidate, by = "CODE_SECT")
+
+shp <- shp %>% 
+  left_join(winner, by = "CODE_SECT")
+```
+
+```{r echo=FALSE}
+library(leaflet)
+shp <- st_transform(shp, crs = 4326)
+
+shp <- shp %>% 
+  mutate(`Canadidate and Party` = factor(`Canadidate and Party`,
+                                         levels = c("Indépendant: Jean Duval",
+                                                    "Futur Montréal: Jean-François Kacou",
+                                                    "Ensemble Montréal: Soraya Martinez Ferrada",
+                                                    "Projet Montréal: Luc Rabouin",
+                                                    "Idépendant: Katy Le Rougetel",
+                                                    "Action Montréal: Gilbert Thibodeau",
+                                                    "Transition Montréal: Craig Sauvé"
+          )))
+pal <- colorFactor(
+  palette = c("darkgreen", "#e9a7cd", "#3a9694", "#1e509c", "#ff4f19"),
+  domain = shp$`Canadidate and Party`
+)
+
+leaflet(shp) |>
+  addTiles() |>
+  addPolygons(
+    fillColor = ~pal(`Canadidate and Party`),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.7,
+    label = ~paste("Winner", `Canadidate and Party`),
+        popup = ~paste0(
+      "<b>District:</b> ", District, "<br>",
+      "<b>Polling Station:</b> ", CODE_SECT, "<br>",
+      "<b>Winner:</b> ", `Canadidate and Party`, "<br>",
+      "<b>Indépendant - Jean Duval:</b> ", `Indépendant: Jean Duval`, "<br>",
+      "<b>Futur Montréal - Jean-François Kacou:</b> ", `Futur Montréal: Jean-François Kacou`, "<br>",
+      "<b>Ensemble Montréal - Soraya Martinez Ferrada:</b> ", `Ensemble Montréal: Soraya Martinez Ferrada`, "<br>",
+      "<b>Projet Montréal - Luc Rabouin:</b> ", `Projet Montréal: Luc Rabouin`, "<br>",
+      "<b>Idépendant: Katy - Le Rougetel:</b> ", `Idépendant: Katy Le Rougetel`, "<br>",
+      "<b>Transition Montréal - Craig Sauvé:</b> ", `Transition Montréal: Craig Sauvé`, "<br>",
+      "<b>Action Montréal - Gilbert Thibodeau:</b> ", `Action Montréal: Gilbert Thibodeau`, "<br>"
+      
+    )
+  ) |>
+  addLegend(
+    "bottomright",
+    pal = pal,
+    values = ~`Canadidate and Party`,
+    title = "Party"
+  )
+ 
+  
+```
