@@ -15,9 +15,9 @@ website:
     right:
       - href: index.qmd
         text: Home
+      - projects.qmd
       - research.qmd
       - teaching.qmd
-      - montreal_election.qmd
 
 format:
   html:
