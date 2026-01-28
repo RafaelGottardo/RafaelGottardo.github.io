@@ -97,7 +97,7 @@ shp <- shp %>%
                                                     "Transition Montréal: Craig Sauvé"
           )))
 pal <- colorFactor(
-  palette = c("darkgreen", "#e9a7cd", "#3a9694", "#1e509c", "#ff4f19"),
+  palette = c("yellow3", "hotpink", "#3a9694", "darkblue", "#ff4f19"),
   domain = shp$`Canadidate and Party`
 )
 
@@ -107,7 +107,7 @@ leaflet(shp) |>
     fillColor = ~pal(`Canadidate and Party`),
     color = "black",
     weight = 1,
-    fillOpacity = 0.7,
+    fillOpacity = 0.8,
     label = ~paste("Winner", `Canadidate and Party`),
         popup = ~paste0(
       "<b>District:</b> ", District, "<br>",
