@@ -7,6 +7,10 @@ library(osmdata)
 library(osmextract)
 library(sf)
 library(tidyverse)
+library(htmltools)
+library(htmlwidgets)
+library(units)
+library(lwgeom)
 
 votes <- read.csv("data/resultats-detailles-2025.csv")
 
@@ -80,36 +84,111 @@ votes_candidate <- shp %>%
 
 shp <- shp %>% 
   left_join(winner, by = "CODE_SECT")
+shp <- shp %>% 
+  mutate(`Canadidate and Party` = replace(`Canadidate and Party`, is.na(`Canadidate and Party`), "No Votes"))
 ```
 
-```{r echo=FALSE}
-library(leaflet)
-shp <- st_transform(shp, crs = 4326)
+```{r echo=FALSE, include=FALSE, warning=FALSE}
 
-shp <- shp %>% 
-  mutate(`Canadidate and Party` = factor(`Canadidate and Party`,
-                                         levels = c("Indépendant: Jean Duval",
-                                                    "Futur Montréal: Jean-François Kacou",
-                                                    "Ensemble Montréal: Soraya Martinez Ferrada",
-                                                    "Projet Montréal: Luc Rabouin",
-                                                    "Idépendant: Katy Le Rougetel",
-                                                    "Action Montréal: Gilbert Thibodeau",
-                                                    "Transition Montréal: Craig Sauvé"
-          )))
-pal <- colorFactor(
-  palette = c("yellow3", "hotpink", "#3a9694", "darkblue", "#ff4f19"),
-  domain = shp$`Canadidate and Party`
+library(cancensus)
+csd_codes <- c(
+  "2466023", "2466007", "2466032", "2466047", "2466058",
+  "2466062", "2466072", "2466087", "2466092", "2466097",
+  "2466102", "2466107", "2466112", "2466117", "2466127", "2466142"
+)
+# Montreal CSD (Census Subdivision)
+mtl_csd <- get_census(
+  dataset = "CA21",
+  regions = list(CSD = csd_codes),  # Montreal city
+  level = "CSD",
+  geo_format = "sf"
 )
 
-leaflet(shp) |>
-  addTiles() |>
-  addPolygons(
-    fillColor = ~pal(`Canadidate and Party`),
-    color = "black",
-    weight = 1,
-    fillOpacity = 0.8,
-    label = ~paste("Winner", `Canadidate and Party`),
-        popup = ~paste0(
+montreal_island <- st_union(mtl_csd$geometry)
+
+cycleways_Montreal <- readRDS("data/cycleways_Montreal.rds")
+bike_lanes <- readRDS("data/bike_lanes.rds")
+
+cycleways_Montreal = cycleways_Montreal %>% 
+  mutate(
+    tags_list = str_split(other_tags, ',') %>%
+      map(~str_replace_all(.x, '"', '')) %>%
+      map(~str_trim(.x))
+  ) %>%
+  mutate(
+    tags_kv = map(tags_list, ~setNames(
+      str_extract(.x, '(?<==>).*'),
+      str_extract(.x, '^[^=]+')
+    ))
+  )
+cycleways_Montreal <- cycleways_Montreal %>% 
+  mutate(
+    cycleway       = map_chr(tags_kv, ~.x["cycleway"] %||% NA_character_),
+    cycleway_left  = map_chr(tags_kv, ~.x["cycleway:left"] %||% NA_character_),
+    cycleway_right = map_chr(tags_kv, ~.x["cycleway:right"] %||% NA_character_)
+  )
+
+bike <- cycleways_Montreal# %>%
+  # filter(
+  #   highway == "cycleway" |
+  #     cycleway %in% c("lane","track") |
+  #     cycleway_left %in% c("lane","track") |
+  #     cycleway_right %in% c("lane","track")
+  # )
+
+bike <- st_transform(bike, st_crs(montreal_island))
+
+bike_mtl <- st_intersection(bike, montreal_island)
+
+bike_lanes <- st_transform(bike_lanes, st_crs(montreal_island))
+
+bike_lanes_mtl <- st_intersection(bike_lanes, montreal_island)
+```
+
+```{r echo=FALSE, warning=FALSE}
+library(leaflet)
+library(leaflet.extras)
+
+library(sf)
+library(dplyr)
+library(purrr)
+
+shp_proj <- st_transform(shp, 3857)
+bike_proj <- st_transform(bike_mtl, 3857)
+bike_proj <- st_cast(bike_proj, "LINESTRING")
+
+# Small buffer around each district to capture lines along boundaries
+shp_buffered <- st_buffer(shp_proj, 1)  # 1 meter buffer
+
+# Compute bike length per district
+shp_proj <- shp_buffered %>%
+  mutate(
+    bike_summary = map_chr(seq_len(nrow(shp_buffered)), function(j) {
+      district_geom <- shp_buffered[j, ]
+      
+      # Select lines that intersect this district (buffered)
+      hits <- st_intersects(bike_proj, district_geom, sparse = FALSE)
+      lines_in_district <- bike_proj[hits[,1], ]
+      
+      if (nrow(lines_in_district) == 0) {
+        return("<span style='color:#999'>0 km</span>")
+      }
+      
+      # Clip the lines to the polygon
+      clipped <- st_intersection(lines_in_district, district_geom)
+      
+      # Convert lengths to numeric before summing
+      lengths <- as.numeric(st_length(clipped))  # <- important fix
+      total_km <- sum(lengths) / 1000
+      
+      display_km <- ifelse(total_km < 0.01, "< 0.01", round(total_km, 2))
+      paste0("<strong>", display_km, " km of bike lanes</strong>")
+    })
+  )
+
+shp <- shp_proj %>%
+  mutate(
+    popup_base = paste0(
       "<b>District:</b> ", District, "<br>",
       "<b>Polling Station:</b> ", CODE_SECT, "<br>",
       "<b>Winner:</b> ", `Canadidate and Party`, "<br>",
@@ -121,14 +200,132 @@ leaflet(shp) |>
       "<b>Transition Montréal - Craig Sauvé:</b> ", `Transition Montréal: Craig Sauvé`, "<br>",
       "<b>Action Montréal - Gilbert Thibodeau:</b> ", `Action Montréal: Gilbert Thibodeau`, "<br>"
       
-    )
+    ),
+
+    popup_bike = paste0(
+      popup_base,
+      "<hr>",
+      "<strong>🚲 Bike lanes</strong><br>",
+      bike_summary
+     )#,
+    # 
+    # popup_demo = paste0(
+    #   popup_base,
+    #   "<hr>",
+    #   "<strong>👥 Demographics</strong><br>",
+    #   "Population: ", population, "<br>",
+    #   "Median income: ", income
+    # )
+  )
+
+
+shp <- shp %>% 
+  mutate(`Canadidate and Party` = factor(`Canadidate and Party`,
+                                         levels = c("Indépendant: Jean Duval",
+                                                    "Futur Montréal: Jean-François Kacou",
+                                                    "Ensemble Montréal: Soraya Martinez Ferrada",
+                                                    "Projet Montréal: Luc Rabouin",
+                                                    "Idépendant: Katy Le Rougetel",
+                                                    "Action Montréal: Gilbert Thibodeau",
+                                                    "Transition Montréal: Craig Sauvé",
+                                                    "No Votes"
+          )))
+
+pal <- colorFactor(
+  palette = c("yellow3", "hotpink", "#3a9694", "darkblue", "#ff4f19", "grey30"),
+  domain = shp$`Canadidate and Party`
+)
+
+# pal_bike <- colorFactor(
+#   domain = bike_lanes_mtl$cycleway,
+#   palette = c("green", "blue", "orange", "red", "white")
+# )
+bike_proj <- st_transform(bike_proj, crs = 4326)
+shp_proj <- st_transform(shp_proj, crs = 4326)
+ 
+  
+leaflet(shp_proj) |>
+  addTiles() |>
+    addFullscreenControl() |>
+  addPolygons(
+    fillColor = ~pal(`Canadidate and Party`),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.8,
+    label = ~paste(`Canadidate and Party`),
+    popupOptions = popupOptions(closeOnClick = FALSE),
+    options = pathOptions(
+      popup_base = shp$popup_base,
+      popup_bike = shp$popup_bike,
+      #popup_demo = districts$popup_demo
+    ),
+    group = "Electoral Districts"
+  ) |>
+  #    addPolylines(
+  #   data = bike_mtl,
+  #   color = "darkgreen",
+  #   weight = 2,
+  #   opacity = 0.9,
+  #   group = "Bike Lanes"
+  # ) |>
+    addPolylines(
+    data = bike_proj,
+    color = "white",
+    #label = ~paste(cycleway),
+    weight = 2,
+    opacity = 0.9,
+    group = "Bike Lanes"
   ) |>
   addLegend(
     "bottomright",
     pal = pal,
     values = ~`Canadidate and Party`,
     title = "Party"
-  )
+  ) %>% 
+   addLayersControl(
+     overlayGroups = c("Electoral Districts", "Bike Lanes"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>% 
+   hideGroup(c(
+    "Bike Lanes"
+  )) %>% 
+  onRender("
+    function(el, x) {
+      var map = this;
+
+      function updatePopups(mode) {
+        map.eachLayer(function(layer) {
+          if (layer.options && layer.options.popup_base) {
+            var html;
+            if (mode === 'bike') {
+              html = layer.options.popup_bike;
+            } else if (mode === 'demo') {
+              html = layer.options.popup_demo;
+            } else {
+              html = layer.options.popup_base;
+            }
+            layer.bindPopup(html, { closeOnClick: false });
+          }
+        });
+      }
+
+      map.on('overlayadd', function(e) {
+        if (e.name === 'Bike Lanes') {
+          updatePopups('bike');
+        }
+        if (e.name === 'Demographics') {
+          updatePopups('demo');
+        }
+      });
+
+      map.on('overlayremove', function(e) {
+        updatePopups('base');
+      });
+
+      updatePopups('base');
+    }
+  ")
  
   
 ```
+

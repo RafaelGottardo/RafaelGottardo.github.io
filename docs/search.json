@@ -67,6 +67,13 @@
     "href": "index.html",
     "title": "Rafael Campos-Gottardo",
     "section": "",
-    "text": "I am researcher interested in using data science techniques to create data informed policy recommendations. I am interested in using quantitative research methods to study urban policy and planning. I have previously contributed to the Canadian Election Study (CES) and worked extensively as a research assistant for the Laurier Institute for the Study of Public Opinion and Policy (LISPOP), Université du Québec à Montréal, and the Centre for the Study of Democratic Citizenship.\nI previously revived a Master’s Degree in Political Science from McGill University and a Bachelor’s degree in Political Science from Wilfrid Laurier University."
+    "text": "I am a quantitative researcher interested in using data science techniques to create data informed policy recommendations in local and urban politics. My current projects include mapping results of the 2026 Montréal election and Thoughts at the End of the Mile a Substack about Montreal politics, planning, and history. I also maintain an active research agenda studying public opinion in Canada and Europe. I have previously contributed to the Canadian Election Study (CES) and worked extensively as a research assistant for the Laurier Institute for the Study of Public Opinion and Policy (LISPOP), Université du Québec à Montréal, and the Centre for the Study of Democratic Citizenship.\nI previously revived a Master’s Degree in Political Science from McGill University and a Bachelor’s degree in Political Science from Wilfrid Laurier University."
+  },
+  {
+    "objectID": "montreal_election.html",
+    "href": "montreal_election.html",
+    "title": "Mapping the 2026 Montreal Election",
+    "section": "",
+    "text": "Warning in pal(cycleway): Some values were outside the color scale and will be\ntreated as NA\nWarning in pal(cycleway): Some values were outside the color scale and will be\ntreated as NA"
   }
 ]
