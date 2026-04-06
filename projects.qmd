@@ -12,6 +12,6 @@ This project maps the 2026 Montreal Election Results, and allows users to overla
 
 *This is an early prototype*
 
-[Availible Here](montreal_election.qmd){.btn .btn-outline-primary .btn role="button"}
+[Available Here](montreal_election.qmd){.btn .btn-outline-primary .btn role="button"}
 :::
 :::

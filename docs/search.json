@@ -11,7 +11,7 @@
     "href": "projects.html",
     "title": "Projects",
     "section": "",
-    "text": "This project maps the 2026 Montreal Election Results, and allows users to overlay neighborhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using R for data analysis (sf, dplyr) and Leaflet for visualization.\nThis is an early prototype\nAvailible Here"
+    "text": "This project maps the 2026 Montreal Election Results, and allows users to overlay neighborhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using R for data analysis (sf, dplyr) and Leaflet for visualization.\nThis is an early prototype\nAvailable Here"
   },
   {
     "objectID": "teaching.html",
