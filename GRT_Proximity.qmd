@@ -1,0 +1,252 @@
+---
+title: "Mapping Transit Proximity in Waterloo Region"
+---
+
+```{r echo=FALSE, include=FALSE}
+
+
+library(leaflet)
+library(leaflet.extras)
+
+library(osmdata)
+library(osmextract)
+library(sf)
+library(tidyverse)
+library(htmltools)
+library(htmlwidgets)
+library(units)
+library(lwgeom)
+library(scales)
+
+Census_data <- read_sf("data/data_raw/ldb_000b21a_e/ldb_000b21a_e.shp")
+
+ION_stops <- read_sf("data/data_raw/ION_Stops/ION_Stops.shp") %>% 
+  st_transform(st_crs(Census_data))
+
+ION_routes <- read_sf("data/data_raw/ION_Routes/ION_Routes.shp") %>% 
+    st_transform(st_crs(Census_data))
+
+GRT_stops <- read_sf("data/data_raw/GRT_Stops/GRT_Stops.shp") %>% 
+  st_transform(st_crs(Census_data))
+
+bouding_box <- read_sf("data/data_raw/Regional_Boundary/Regional_Boundary.shp") %>% 
+  st_transform(st_crs(Census_data))
+
+Census_area <- Census_data[st_within(Census_data$geometry, bouding_box, sparse = FALSE), ]
+
+Census_centroid <- Census_area %>%   st_centroid()
+
+distance_matrix_ION <- st_distance(Census_centroid, ION_stops)
+
+
+Census_centroid <- Census_centroid %>% 
+  mutate(
+    nearest_ION_idx  = apply(distance_matrix_ION, 1, which.min),
+    dist_to_ION_city = apply(distance_matrix_ION, 1, min) / 1000,
+    nearest_ION_name = ION_stops$StopName[nearest_ION_idx]
+  )
+
+# Sys.setenv(CANCENSUS_API_KEY = "CensusMapper_164474c9705b09054f031a9bff098515")
+ source("analysis_files/ontario_db_demographics.R")
+
+#load("ontario_db_demographics_2021.rds")
+
+Census_area <- Census_area %>% 
+  left_join(
+    Census_centroid %>%
+      st_drop_geometry() %>%
+      select(DBUID, nearest_ION_name, dist_to_ION_city, nearest_ION_idx),
+    by = "DBUID"
+  )
+
+Census_area <- Census_area %>% 
+  left_join(ontario_db, by = c("DBUID" = "GeoUID"))
+
+
+Census_area <- Census_area %>% 
+    mutate(Denisty = Population/`Area (sq km)`)
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+
+
+# shp_proj <- st_transform(shp, 3857)
+# bike_proj <- st_transform(bike_mtl, 3857)
+# bike_proj <- st_cast(bike_proj, "LINESTRING")
+# 
+# # Small buffer around each district to capture lines along boundaries
+# shp_buffered <- st_buffer(shp_proj, 1)  # 1 meter buffer
+# 
+# # Compute bike length per district
+# shp_proj <- shp_buffered %>%
+#   mutate(
+#     bike_summary = map_chr(seq_len(nrow(shp_buffered)), function(j) {
+#       district_geom <- shp_buffered[j, ]
+#       
+#       # Select lines that intersect this district (buffered)
+#       hits <- st_intersects(bike_proj, district_geom, sparse = FALSE)
+#       lines_in_district <- bike_proj[hits[,1], ]
+#       
+#       if (nrow(lines_in_district) == 0) {
+#         return("<span style='color:#999'>0 km</span>")
+#       }
+#       
+#       # Clip the lines to the polygon
+#       clipped <- st_intersection(lines_in_district, district_geom)
+#       
+#       # Convert lengths to numeric before summing
+#       lengths <- as.numeric(st_length(clipped))  # <- important fix
+#       total_km <- sum(lengths) / 1000
+#       
+#       display_km <- ifelse(total_km < 0.01, "< 0.01", round(total_km, 2))
+#       paste0("<strong>", display_km, " km of bike lanes</strong>")
+#     })
+#   )
+
+Census_area <- Census_area %>%
+  mutate(
+    popup_base = paste0(
+      "<b>NAME TEST:</b> ", DBUID, "<br>"
+      
+    ),
+
+    popup_ION = paste0(
+      popup_base,
+      "<hr>",
+      "<strong> Nearest ION Stop</strong><br>",
+      nearest_ION_name, "<br>",
+      "<strong> Nearest ION Distance</strong><br>",
+      dist_to_ION_city, "km"
+     ),
+
+    popup_demo = paste0(
+      popup_base,
+      "<hr>",
+      "<strong>👥 Demographics</strong><br>",
+      "Population Denisty: ", Denisty, "<br>",
+      "Dwellings: ", Dwellings
+      
+    )
+  )
+
+
+
+pal_ion <- colorFactor(
+  palette = rev(c("#E8F5F0", "#C2E8DC", "#9ADBC7", "#6DCBAF", "#3EBB96", "#00A87A", "#00925E", "#007A4A",
+  "#006038", "#004D2C")),
+  domain = Census_area$dist_to_ION_city
+)
+
+
+pal_dens <- colorFactor(
+  palette = rev(c("#E8F5F0", "#C2E8DC", "#9ADBC7", "#6DCBAF", "#3EBB96", "#00A87A", "#00925E", "#007A4A",
+  "#006038", "#004D2C")),
+  domain = Census_area$Denisty
+)
+
+ION_colour <- colorFactor(palette = c("orange", "white"),
+                          domain = ION_stops$Stage1)
+
+# pal_bike <- colorFactor(
+#   domain = bike_lanes_mtl$cycleway,
+#   palette = c("green", "blue", "orange", "red", "white")
+# )
+Census_area <- st_transform(Census_area, crs = 4326)
+ION_stops <- st_transform(ION_stops, crs = 4326)
+ION_routes <- st_transform(ION_routes, crs = 4326)
+  
+leaflet(Census_area) |>
+addProviderTiles("CartoDB.Positron") |>
+    addFullscreenControl() |>
+  addPolygons(
+    fillColor = ~pal_ion(dist_to_ION_city),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.8,
+    # label = ~paste(`Canadidate and Party`),
+     popupOptions = popupOptions(closeOnClick = FALSE),
+     options = pathOptions(
+       popup_base = Census_area$popup_base,
+       popup_ION = Census_area$popup_ION,
+       popup_demo = Census_area$popup_demo
+    ),
+    group = "ION Stops"
+  ) |>
+    addPolygons(
+    fillColor = ~pal_dens(Denisty),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.8,
+    # label = ~paste(`Canadidate and Party`),
+     popupOptions = popupOptions(closeOnClick = FALSE),
+     options = pathOptions(
+       popup_base = Census_area$popup_base,
+       popup_ION = Census_area$popup_ION,
+       popup_demo = Census_area$popup_demo
+    ),
+    group = "Demographics"
+  ) |>
+     addPolylines(
+    data = ION_routes,
+    color = ~ION_colour(Stage1),
+    weight = 2,
+    opacity = 0.9,
+    group = c("ION Stops", "Demographics")
+  ) |>
+    addCircleMarkers(
+    data = ION_stops,
+    
+     color = ~ION_colour(Stage1),
+    # #label = ~paste(cycleway),
+     weight = 1,
+    # opacity = 0.9,
+    group = c("ION Stops", "Demographics")
+  )  |> 
+   addLayersControl(
+     overlayGroups = c("ION Stops", "Demographics"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>% 
+  #  hideGroup(c(
+  #   "Bike Lanes"
+  # )) %>% 
+  onRender("
+    function(el, x) {
+      var map = this;
+
+      function updatePopups(mode) {
+        map.eachLayer(function(layer) {
+          if (layer.options && layer.options.popup_base) {
+            var html;
+            if (mode === 'Ion') {
+              html = layer.options.popup_ION;
+            } else if (mode === 'demo') {
+              html = layer.options.popup_demo;
+            } else {
+              html = layer.options.popup_base;
+            }
+            layer.bindPopup(html, { closeOnClick: false });
+          }
+        });
+      }
+
+      map.on('overlayadd', function(e) {
+        if (e.name === 'ION Stops') {
+          updatePopups('Ion');
+        }
+        if (e.name === 'Demographics') {
+          updatePopups('demo');
+        }
+      });
+
+      map.on('overlayremove', function(e) {
+        updatePopups('base');
+      });
+
+      updatePopups('base');
+    }
+  ")
+ 
+  
+```
+
