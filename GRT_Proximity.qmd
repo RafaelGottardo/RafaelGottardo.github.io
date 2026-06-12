@@ -129,7 +129,7 @@ Routes_serviced_long <- Routes_serviced %>%
     separate_rows(Routes, sep = ",\\s*")
   
 Census_area <- Census_area %>% 
-  mutate(Express_bus = ifelse(str_detect(Routes, "^20"), "Yes", "No"),
+  mutate(Express_bus = ifelse(str_detect(Routes, "201|202|203|204|205|206"), "Yes", "No"),
          Access_ION = ifelse(str_detect(Routes, "301"), "Yes", "No"),
          Connected_ION = map_chr(Routes, function(r) {
     routes_list <- str_trim(str_split(r, ",")[[1]])
