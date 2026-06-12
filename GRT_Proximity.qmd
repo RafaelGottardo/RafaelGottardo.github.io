@@ -365,8 +365,9 @@ addProviderTiles("CartoDB.Positron") |>
   #   group = c("Bus Stops")
   # ) |>
    addLayersControl(
-     overlayGroups = c("ION Stops", "ION Distance", "Demographics", "Bus Stops", "Transit Connectivity"),
-    options = layersControlOptions(collapsed = FALSE)
+     baseGroups = c( "ION Distance", "Demographics", "Bus Stops", "Transit Connectivity"),
+    options = layersControlOptions(autoZIndex = TRUE,
+                                   collapsed = FALSE)
   ) %>% 
    hideGroup(c(
    "ION Distance", "Demographics", "Transit Connectivity"
@@ -395,7 +396,7 @@ addProviderTiles("CartoDB.Positron") |>
         });
       }
 
-      map.on('overlayadd', function(e) {
+      map.on('baselayerchange', function(e) {
         if (e.name === 'ION Distance') {
           updatePopups('Ion');
         }
