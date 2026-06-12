@@ -1,5 +1,5 @@
 ---
-title: "Mapping Transit Proximity in Waterloo Region"
+title: "Mapping Transit Access in Waterloo Region"
 ---
 
 ```{r echo=FALSE, include=FALSE}
@@ -28,6 +28,12 @@ ION_routes <- read_sf("data/data_raw/ION_Routes/ION_Routes.shp") %>%
 
 GRT_stops <- read_sf("data/data_raw/GRT_Stops/GRT_Stops.shp") %>% 
   st_transform(st_crs(Census_data))
+
+Routes <- read.csv("data/data_raw/stops_long.csv")
+
+GRT_stops <- GRT_stops %>% 
+  left_join(Routes, by = c("EasyGo" = "stop_number")) %>% 
+  rename(StopName = stop_name)
 
 bouding_box <- read_sf("data/data_raw/Regional_Boundary/Regional_Boundary.shp") %>% 
   st_transform(st_crs(Census_data))
@@ -65,6 +71,79 @@ Census_area <- Census_area %>%
 
 Census_area <- Census_area %>% 
     mutate(Denisty = Population/`Area (sq km)`)
+
+Transit_stops <- bind_rows(GRT_stops %>% select(StopName, route, geometry),
+                           ION_stops %>% select(StopName, geometry, Stage1))
+Census_area <- st_make_valid(Census_area)
+
+
+distance_matrix_transit <- st_is_within_distance(Census_area, Transit_stops,
+                                                 dist = 800)
+
+
+stop_matches <- tibble(
+  census_idx = rep(seq_along(distance_matrix_transit), 
+                   lengths(distance_matrix_transit)),
+  stop_idx   = unlist(distance_matrix_transit)
+) |>
+  mutate(
+    census_id = Census_area$DBUID[census_idx],
+    stop_id   = Transit_stops$StopName[stop_idx],
+    Routes = Transit_stops$route[stop_idx],
+    Stage = Transit_stops$Stage1[stop_idx]
+  )
+
+
+Nearby_Routes <- stop_matches %>% 
+  group_by(census_id) %>% 
+  filter(is.na(Stage)) %>% 
+  filter(!is.na(Routes)) %>% 
+  summarise(Routes = paste(sort(unique(Routes)), collapse = ", "))
+
+distance_matrix_ION_stop <- st_is_within_distance(ION_stops, Transit_stops,
+                                                 dist = 800)
+
+
+ION_bus <- tibble(
+  census_idx = rep(seq_along(distance_matrix_ION_stop), 
+                   lengths(distance_matrix_ION_stop)),
+  stop_idx   = unlist(distance_matrix_ION_stop)
+) |>
+  mutate(
+    ION_name = ION_stops$StopName[census_idx],
+    stop_id   = Transit_stops$StopName[stop_idx],
+    Routes = Transit_stops$route[stop_idx],
+    Stage = Transit_stops$Stage1[stop_idx]
+  )
+
+Routes_serviced <- ION_bus %>% 
+    group_by(ION_name) %>% 
+  #filter(is.na(Stage)) %>% 
+  filter(!is.na(Routes)) %>% 
+  summarise(Routes = paste(unique(Routes), collapse = ", "))
+
+Census_area <- Census_area %>% 
+  left_join(Nearby_Routes, by = c("DBUID" = "census_id"))
+  
+Routes_serviced_long <- Routes_serviced %>% 
+    separate_rows(Routes, sep = ",\\s*")
+  
+Census_area <- Census_area %>% 
+  mutate(Express_bus = ifelse(str_detect(Routes, "^20"), "Yes", "No"),
+         Access_ION = ifelse(str_detect(Routes, "301"), "Yes", "No"),
+         Connected_ION = map_chr(Routes, function(r) {
+    routes_list <- str_trim(str_split(r, ",")[[1]])
+    if (any(routes_list %in% Routes_serviced_long$Routes)) "Yes" else "No"
+  }),
+  ION_STOP_CONNECTED = map_chr(Routes, function(r) {
+    routes_list <- str_trim(str_split(r, ",")[[1]])
+    matches <- Routes_serviced_long$ION_name[Routes_serviced_long$Routes %in% routes_list]
+    if (length(matches) > 0) paste(unique(matches), collapse = ", ") else "No"
+  }),
+  ION_connectivity = case_when(Access_ION == "Yes" ~ "Direct Connectivity",
+                               Connected_ION == "Yes"  ~ "Single Transfer to ION",
+                               TRUE ~ "Not Connected to the ION"))
+
 
 ```
 
@@ -117,7 +196,7 @@ Census_area <- Census_area %>%
       "<strong> Nearest ION Stop</strong><br>",
       nearest_ION_name, "<br>",
       "<strong> Nearest ION Distance</strong><br>",
-      dist_to_ION_city, "km"
+      round(dist_to_ION_city, 2), "km"
      ),
 
     popup_demo = paste0(
@@ -127,26 +206,58 @@ Census_area <- Census_area %>%
       "Population Denisty: ", Denisty, "<br>",
       "Dwellings: ", Dwellings
       
-    )
+    ),
+    
+    pop_up_routes = paste0(
+      popup_base,
+      "<hr>",
+      "<strong>Transit Connectivity</strong><br>",
+      "Nearby Transit Routes: ", Routes, "<br>",
+      "Access to iXpress: ", Express_bus, "<br>",
+      "Access to ION: ", Access_ION, "<br>"
+                           ),
+    
+    pop_up_connectivity = paste0(
+      popup_base,
+      "<hr>",
+      "<strong>Transit Connectivity</strong><br>",
+      "Connected to ION: ", Connected_ION, "<br>",
+      "Connected Station:", ION_STOP_CONNECTED, "<br>"
+      
+                           )
+    
   )
 
 
 
 pal_ion <- colorFactor(
-  palette = rev(c("#E8F5F0", "#C2E8DC", "#9ADBC7", "#6DCBAF", "#3EBB96", "#00A87A", "#00925E", "#007A4A",
-  "#006038", "#004D2C")),
+  palette = rev(c("#FEF0F4", "#FCD4DF", "#F7ADBC", "#EF8099", "#E05070", "#C62F50", "#A01A38", "#780D26", "#520418", "#30000E")),
   domain = Census_area$dist_to_ION_city
 )
 
 
 pal_dens <- colorFactor(
-  palette = rev(c("#E8F5F0", "#C2E8DC", "#9ADBC7", "#6DCBAF", "#3EBB96", "#00A87A", "#00925E", "#007A4A",
-  "#006038", "#004D2C")),
+  palette = c("#F3EFFD", "#D9CFFB", "#BAABF5", "#9885ED", "#7660E0", "#5A3EC8", "#4228A8", "#2E1880", "#1E0E60", "#100740"),
   domain = Census_area$Denisty
 )
 
-ION_colour <- colorFactor(palette = c("orange", "white"),
+pal_express <- colorFactor(
+  palette = c("darkgreen", "white"),
+  domain = Census_area$Express_bus
+)
+
+ION_colour <- colorFactor(palette = c("orange", "#004D2C"),
                           domain = ION_stops$Stage1)
+
+ION_connectivity_colour <- colorFactor(palette = c("red", "blue", "white"),
+                          domain = Census_area$ION_connectivity)
+
+Bus_stops = GRT_stops %>% 
+  group_by(StopID) %>% 
+  summarise(geometry = unique(geometry),
+            StopName = unique(StopName)
+            )
+
 
 # pal_bike <- colorFactor(
 #   domain = bike_lanes_mtl$cycleway,
@@ -155,61 +266,111 @@ ION_colour <- colorFactor(palette = c("orange", "white"),
 Census_area <- st_transform(Census_area, crs = 4326)
 ION_stops <- st_transform(ION_stops, crs = 4326)
 ION_routes <- st_transform(ION_routes, crs = 4326)
+Bus_stops <- st_transform(Bus_stops, crs = 4326)
   
 leaflet(Census_area) |>
 addProviderTiles("CartoDB.Positron") |>
     addFullscreenControl() |>
+  addMapPane("top_layer_pane", zIndex = 450) %>% 
   addPolygons(
     fillColor = ~pal_ion(dist_to_ION_city),
     color = "black",
     weight = 1,
-    fillOpacity = 0.8,
+    fillOpacity = 0.6,
     # label = ~paste(`Canadidate and Party`),
      popupOptions = popupOptions(closeOnClick = FALSE),
      options = pathOptions(
        popup_base = Census_area$popup_base,
        popup_ION = Census_area$popup_ION,
-       popup_demo = Census_area$popup_demo
+       popup_demo = Census_area$popup_demo,
+       pop_up_routes = Census_area$pop_up_routes,
+       popup_transit = Census_area$pop_up_connectivity
+
     ),
-    group = "ION Stops"
+    group = "ION Distance"
   ) |>
     addPolygons(
     fillColor = ~pal_dens(Denisty),
     color = "black",
     weight = 1,
-    fillOpacity = 0.8,
+    fillOpacity = 0.6,
     # label = ~paste(`Canadidate and Party`),
      popupOptions = popupOptions(closeOnClick = FALSE),
      options = pathOptions(
        popup_base = Census_area$popup_base,
        popup_ION = Census_area$popup_ION,
-       popup_demo = Census_area$popup_demo
+       popup_demo = Census_area$popup_demo,
+       pop_up_routes = Census_area$pop_up_routes,
+       popup_transit = Census_area$pop_up_connectivity
+
     ),
     group = "Demographics"
+  ) |>  addPolygons(
+    fillColor = ~ION_connectivity_colour(ION_connectivity),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.6,
+    # label = ~paste(`Canadidate and Party`),
+     popupOptions = popupOptions(closeOnClick = FALSE),
+     options = pathOptions(
+       popup_base = Census_area$popup_base,
+       popup_ION = Census_area$popup_ION,
+       popup_demo = Census_area$popup_demo,
+       pop_up_routes = Census_area$pop_up_routes,
+       popup_transit = Census_area$pop_up_connectivity
+    ),
+    group = "Transit Connectivity"
+  ) |>
+  addPolygons(
+    fillColor = ~pal_express(Express_bus),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.6,
+    # label = ~paste(`Canadidate and Party`),
+     popupOptions = popupOptions(closeOnClick = FALSE),
+     options = pathOptions(
+       popup_base = Census_area$popup_base,
+       popup_ION = Census_area$popup_ION,
+       popup_demo = Census_area$popup_demo,
+       pop_up_routes = Census_area$pop_up_routes,
+       popup_transit = Census_area$pop_up_connectivity
+
+    ),
+    group = "Bus Stops"
   ) |>
      addPolylines(
     data = ION_routes,
+     options = pathOptions(pane = "top_layer_pane"),
     color = ~ION_colour(Stage1),
-    weight = 2,
-    opacity = 0.9,
-    group = c("ION Stops", "Demographics")
+    weight = 4,
+    opacity = 1,
+    group = c("ION Stops")
   ) |>
     addCircleMarkers(
     data = ION_stops,
-    
+    options = pathOptions(pane = "top_layer_pane"), 
      color = ~ION_colour(Stage1),
     # #label = ~paste(cycleway),
      weight = 1,
     # opacity = 0.9,
-    group = c("ION Stops", "Demographics")
+    group = c("ION Stops")
   )  |> 
+  #   addMarkers(
+  #   data = Bus_stops,
+  #   options = pathOptions(pane = "top_layer_pane"), 
+  #   # color = "yellow3",
+  #  label = ~paste(StopName),
+  #   # weight = 1,
+  #   # opacity = 0.9,
+  #   group = c("Bus Stops")
+  # ) |>
    addLayersControl(
-     overlayGroups = c("ION Stops", "Demographics"),
+     overlayGroups = c("ION Stops", "ION Distance", "Demographics", "Bus Stops", "Transit Connectivity"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>% 
-  #  hideGroup(c(
-  #   "Bike Lanes"
-  # )) %>% 
+   hideGroup(c(
+   "ION Distance", "Demographics", "Transit Connectivity"
+  )) %>%
   onRender("
     function(el, x) {
       var map = this;
@@ -222,6 +383,10 @@ addProviderTiles("CartoDB.Positron") |>
               html = layer.options.popup_ION;
             } else if (mode === 'demo') {
               html = layer.options.popup_demo;
+            } else if (mode === 'bus') {
+              html = layer.options.pop_up_routes;
+            } else if (mode === 'connect') {
+              html = layer.options.popup_transit;
             } else {
               html = layer.options.popup_base;
             }
@@ -231,13 +396,20 @@ addProviderTiles("CartoDB.Positron") |>
       }
 
       map.on('overlayadd', function(e) {
-        if (e.name === 'ION Stops') {
+        if (e.name === 'ION Distance') {
           updatePopups('Ion');
         }
         if (e.name === 'Demographics') {
           updatePopups('demo');
         }
-      });
+        if (e.name === 'Bus Stops') {
+          updatePopups('bus');
+        } 
+        if (e.name === 'Transit Connectivity') {
+          updatePopups('connect');
+        }
+      } 
+      );
 
       map.on('overlayremove', function(e) {
         updatePopups('base');
