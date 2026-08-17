@@ -1,24 +1,17 @@
 [
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Rafael Campos-Gottardo",
     "section": "",
-    "text": "About this site\n\n1 + 1\n\n[1] 2"
+    "text": "I am a quantitative researcher interested in using data science techniques to create data informed policy recommendations in local and urban politics. My current projects include mapping results of the 2026 Montréal election and Thoughts at the End of the Mile a Substack about Montreal politics, planning, and history. I also maintain an active research agenda studying public opinion in Canada and Europe. I have previously contributed to the Canadian Election Study (CES) and worked extensively as a research assistant for the Laurier Institute for the Study of Public Opinion and Policy (LISPOP), Université du Québec à Montréal, and the Centre for the Study of Democratic Citizenship.\nI previously received a Master’s Degree in Political Science from McGill University and a Bachelor’s degree in Political Science from Wilfrid Laurier University."
   },
   {
-    "objectID": "projects.html",
-    "href": "projects.html",
-    "title": "Projects",
+    "objectID": "conferences.html",
+    "href": "conferences.html",
+    "title": "Conferences",
     "section": "",
-    "text": "This project maps the 2026 Montreal Election Results, and allows users to overlay neighborhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using R for data analysis (sf, dplyr) and Leaflet for visualization.\nThis is an early prototype\nAvailable Here"
-  },
-  {
-    "objectID": "teaching.html",
-    "href": "teaching.html",
-    "title": "Teaching",
-    "section": "",
-    "text": "I have extensive experience teaching quantitative research methods. Below is a list of courses I have TAed and guest lectures I have given along with teaching reviews and materials prepared for the classes.\n\nR Guides\n\nGetting Started in R\nWorking with Data in R\nLinear Regression in R\nVisualizing Regression in R\nAdvanced Regression in R\n\n\n\nWorkshops & Guest Lectures\nTopic Modelling in Political Science - CSDC/CEDC Winter Methods School\nCourse Materials\nPO479 - Wilfrid Laurier University (Quantitative Casual Inference)\nSlides\n\n\nTeaching Assistant\n\nMcGill University\nCDSI/CSDC - R Summer Camp - August 2024 & 2025\nPOLI311 - Introduction to Quantitative Methods - Winter 2024 & 2025\nPOLI210 - Political Science Research Methods - Fall 2024"
+    "text": "Papers\nErlich, A., Stolle, D., & Campos-Gottardo, R. (2024, June). Civic Engagement in Rebuilding Ukraine: Observational and Experimental Evidence. Paper presented at the Canadian Political Science Association’s Annual Conference, Montreal, QC.\nCampos-Gottardo, R. & Kiss, S. (2024, June). Social Media Use and Polarization in Ontario: 2018 Case Study. Paper presented at the Canadian Political Science Association’s Annual Conference, Montreal, QC.\nCampos-Gottardo, R. (2024, January). Correlates of Populist Attitudes in Canada: Evidence from the CES. Paper presented at the Bell Chair Graduate Student Conference, Ottawa, ON.\nPaper Slides\nCampos-Gottardo, R. (2022, August). Populism and authoritarianism during the COVID-19 pandemic: The case of Nayib Bukele in El Salvador. Paper presented at the annual Congress of the Canadian Association for Latin American and Caribbean Studies, Toronto, ON.\nSlides\n\n\nPosters\nCampos-Gottardo, R. & Perrella, A. (2023, May). The Role of Populist Attitudes on Support for Centrist Populist Candidates: Evidence From El Salvador. Poster presented at the Canadian Political Science Association’s Annual Conference, Toronto, ON.\nPoster\nCampos-Gottardo, R., Jasemi, A., & Gottardo, A. (2022, June). Parenting beliefs about the importance of politics and child qualities: Similarities and differences across borders. Poster presented at Development 2022, Calgary, AB."
   },
   {
     "objectID": "research.html",
@@ -56,17 +49,24 @@
     "text": "Conference Presentations\n\nPapers\nArp, M., Campos-Gottardo, R., Gravelle, T., Kiss, S., Piscitelli, A., & Spicer, Z. (authors in alphabetical order) (2025, June). Do appeals to benefits overcome NIMBY-ISM?. Paper presented at the Canadian Political Science Association’s Annual Conference, Toronto, ON.\nErlich, A., Stolle, D., & Campos-Gottardo, R. (2024, June). Civic Engagement in Rebuilding Ukraine: Observational and Experimental Evidence. Paper presented at the Canadian Political Science Association’s Annual Conference, Montreal, QC.\nCampos-Gottardo, R. & Kiss, S. (2024, June). Social Media Use and Polarization in Ontario: 2018 Case Study. Paper presented at the Canadian Political Science Association’s Annual Conference, Montreal, QC.\nCampos-Gottardo, R. (2024, January). Correlates of Populist Attitudes in Canada: Evidence from the CES. Paper presented at the Bell Chair Graduate Student Conference, Ottawa, ON.\nPaper Slides\nCampos-Gottardo, R. (2022, August). Populism and authoritarianism during the COVID-19 pandemic: The case of Nayib Bukele in El Salvador. Paper presented at the annual Congress of the Canadian Association for Latin American and Caribbean Studies, Toronto, ON.\nSlides\n\n\nPosters\nLehecka, N., Thomson, B., Campos-Gottardo, R., & Kiss, S. (2025, June). Did The Ford Government Suffer Any Electoral Backlash From the Laurentian University Bankruptcy? Poster presented at the Canadian Political Science Association, Toronto, ON.\nCampos-Gottardo, R. & Perrella, A. (2023, May). The Role of Populist Attitudes on Support for Centrist Populist Candidates: Evidence From El Salvador. Poster presented at the Canadian Political Science Association’s Annual Conference, Toronto, ON.\nPoster\nCampos-Gottardo, R., Jasemi, A., & Gottardo, A. (2022, June). Parenting beliefs about the importance of politics and child qualities: Similarities and differences across borders. Poster presented at Development 2022, Calgary, AB."
   },
   {
-    "objectID": "conferences.html",
-    "href": "conferences.html",
-    "title": "Conferences",
+    "objectID": "teaching.html",
+    "href": "teaching.html",
+    "title": "Teaching",
     "section": "",
-    "text": "Papers\nErlich, A., Stolle, D., & Campos-Gottardo, R. (2024, June). Civic Engagement in Rebuilding Ukraine: Observational and Experimental Evidence. Paper presented at the Canadian Political Science Association’s Annual Conference, Montreal, QC.\nCampos-Gottardo, R. & Kiss, S. (2024, June). Social Media Use and Polarization in Ontario: 2018 Case Study. Paper presented at the Canadian Political Science Association’s Annual Conference, Montreal, QC.\nCampos-Gottardo, R. (2024, January). Correlates of Populist Attitudes in Canada: Evidence from the CES. Paper presented at the Bell Chair Graduate Student Conference, Ottawa, ON.\nPaper Slides\nCampos-Gottardo, R. (2022, August). Populism and authoritarianism during the COVID-19 pandemic: The case of Nayib Bukele in El Salvador. Paper presented at the annual Congress of the Canadian Association for Latin American and Caribbean Studies, Toronto, ON.\nSlides\n\n\nPosters\nCampos-Gottardo, R. & Perrella, A. (2023, May). The Role of Populist Attitudes on Support for Centrist Populist Candidates: Evidence From El Salvador. Poster presented at the Canadian Political Science Association’s Annual Conference, Toronto, ON.\nPoster\nCampos-Gottardo, R., Jasemi, A., & Gottardo, A. (2022, June). Parenting beliefs about the importance of politics and child qualities: Similarities and differences across borders. Poster presented at Development 2022, Calgary, AB."
+    "text": "I have extensive experience teaching quantitative research methods. Below is a list of courses I have TAed and guest lectures I have given along with teaching reviews and materials prepared for the classes.\n\nR Guides\n\nGetting Started in R\nWorking with Data in R\nLinear Regression in R\nVisualizing Regression in R\nAdvanced Regression in R\n\n\n\nWorkshops & Guest Lectures\nTopic Modelling in Political Science - CSDC/CEDC Winter Methods School\nCourse Materials\nPO479 - Wilfrid Laurier University (Quantitative Casual Inference)\nSlides\n\n\nTeaching Assistant\n\nMcGill University\nCDSI/CSDC - R Summer Camp - August 2024 & 2025\nPOLI311 - Introduction to Quantitative Methods - Winter 2024 & 2025\nPOLI210 - Political Science Research Methods - Fall 2024"
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Rafael Campos-Gottardo",
+    "objectID": "projects.html",
+    "href": "projects.html",
+    "title": "Projects",
     "section": "",
-    "text": "I am a quantitative researcher interested in using data science techniques to create data informed policy recommendations in local and urban politics. My current projects include mapping results of the 2026 Montréal election and Thoughts at the End of the Mile a Substack about Montreal politics, planning, and history. I also maintain an active research agenda studying public opinion in Canada and Europe. I have previously contributed to the Canadian Election Study (CES) and worked extensively as a research assistant for the Laurier Institute for the Study of Public Opinion and Policy (LISPOP), Université du Québec à Montréal, and the Centre for the Study of Democratic Citizenship.\nI previously received a Master’s Degree in Political Science from McGill University and a Bachelor’s degree in Political Science from Wilfrid Laurier University."
+    "text": "This project maps the 2026 Montreal Election Results, and allows users to overlay neighborhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using R for data analysis (sf, dplyr) and Leaflet for visualization.\nThis is an early prototype\nAvailable Here"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site\n\n1 + 1\n\n[1] 2"
   }
 ]

@@ -1,0 +1,143 @@
+---
+title: "Toronto Permits Map"
+---
+
+```{r echo=FALSE, include=FALSE}
+library(sf) 
+library(tidyverse)
+library(leaflet)
+library(leaflet.extras)
+
+library(osmdata)
+library(osmextract)
+library(htmltools)
+library(htmlwidgets)
+library(units)
+library(lwgeom)
+library(scales)
+```
+
+
+```{r echo=FALSE, include=FALSE}
+source("load_data.R")
+```
+
+
+```{r echo=FALSE, warning=FALSE}
+
+pal_dens <- colorFactor(
+  palette = c("#F3EFFD", "#D9CFFB", "#BAABF5", "#9885ED", "#7660E0", "#5A3EC8", "#4228A8", "#2E1880", "#1E0E60", "#100740"),
+  domain = toronto_FSA$Denisty
+)
+
+permit_colour <- colorFactor(palette = c("orange", "#004D2C"),
+                          domain = toronto_permits$change)
+
+leaflet(toronto_FSA) |>
+addProviderTiles("CartoDB.Positron") |>
+    addFullscreenControl() |>
+  addMapPane("top_layer_pane", zIndex = 450) |> 
+  addPolygons(
+    fillColor = ~pal_dens(Denisty),
+    color = "black",
+    weight = 1,
+    fillOpacity = 0.6,
+    # label = ~paste(`Canadidate and Party`),
+     popupOptions = popupOptions(closeOnClick = FALSE),
+    group = "Building Permits (2020-2021)"
+  )|> 
+    addCircleMarkers(
+      data = toronto_permits_2021,
+      radius = 2,
+    color = ~permit_colour(change),
+    weight = 1,
+    fillOpacity = 0.2,
+    group = "Building Permits (2020-2021)",
+    popupOptions = popupOptions(closeOnClick = FALSE),
+    options = pathOptions(
+       popup_base = toronto_permits_2021$pop_up
+
+    )
+  ) |>
+  # 
+  # addPolygons(
+  #   fillColor = ~pal_dens(Denisty),
+  #   color = "black",
+  #   weight = 1,
+  #   fillOpacity = 0.6,
+  #   # label = ~paste(`Canadidate and Party`),
+  #    popupOptions = popupOptions(closeOnClick = FALSE),
+  #   group = "Building Permits (all time)"
+  # )|> 
+  #   addCircleMarkers(
+  #     data = toronto_permits_2021,
+  #     radius = 2,
+  #   color = ~permit_colour(change),
+  #   weight = 1,
+  #   fillOpacity = 0.2,
+  #   group = "Building Permits (all time)",
+  #   popupOptions = popupOptions(closeOnClick = FALSE),
+  #   options = pathOptions(
+  #      popup_base = toronto_permits$pop_up
+  # 
+  #   )
+  # ) |> 
+addLayersControl(
+     baseGroups = c( "Building Permits (2020-2021)", "Building Permits (all time)"),
+    options = layersControlOptions(autoZIndex = TRUE,
+                                   collapsed = FALSE)
+  ) %>% 
+   hideGroup(c(
+   "Building Permits (all time)", "Demographics", "Transit Connectivity"
+  )) %>%
+  onRender("
+    function(el, x) {
+      var map = this;
+
+      function updatePopups(mode) {
+        map.eachLayer(function(layer) {
+          if (layer.options && layer.options.popup_base) {
+            var html;
+            if (mode === 'permit') {
+              html = layer.options.popup_base;
+            } else if (mode === 'demo') {
+              html = layer.options.popup_demo;
+            } else if (mode === 'bus') {
+              html = layer.options.pop_up_routes;
+            } else if (mode === 'connect') {
+              html = layer.options.popup_transit;
+            } else {
+              html = layer.options.popup_base;
+            }
+            layer.bindPopup(html, { closeOnClick: false });
+          }
+        });
+      }
+
+      map.on('baselayerchange', function(e) {
+        if (e.name === 'Permit Data ') {
+          updatePopups('permit');
+        }
+        if (e.name === 'Demographics') {
+          updatePopups('demo');
+        }
+        if (e.name === 'Bus Stops') {
+          updatePopups('bus');
+        } 
+        if (e.name === 'Transit Connectivity') {
+          updatePopups('connect');
+        }
+      } 
+      );
+
+      map.on('overlayremove', function(e) {
+        updatePopups('base');
+      });
+
+      updatePopups('base');
+    }
+  ")
+
+```
+
+
