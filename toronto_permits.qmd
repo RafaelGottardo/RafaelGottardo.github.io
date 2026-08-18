@@ -3,7 +3,7 @@ title: "Toronto Permits Map"
 ---
 
 ```{r echo=FALSE, include=FALSE}
-library(sf) 
+library(sf)
 library(tidyverse)
 library(leaflet)
 library(leaflet.extras)
@@ -15,6 +15,11 @@ library(htmlwidgets)
 library(units)
 library(lwgeom)
 library(scales)
+
+# Used below to shrink the dissemination-block polygons that get embedded in
+# the rendered page. Installed once if missing.
+if (!requireNamespace("rmapshaper", quietly = TRUE)) install.packages("rmapshaper")
+library(rmapshaper)
 ```
 
 
@@ -25,41 +30,72 @@ source("load_data.R")
 
 ```{r echo=FALSE, warning=FALSE}
 
+# ------------------------------------------------------------------------
+# Performance prep: the rendered .qmd embeds every polygon/point as GeoJSON
+# directly in the page's HTML, so on a static host (GitHub Pages) the file
+# size and vertex/feature count *are* the load time. Nothing below drops a
+# single building permit or a single dissemination block -- it only trims
+# columns the map never uses and reduces vertex density on the polygons.
+# ------------------------------------------------------------------------
+
+# 1) Keep only the columns the map actually reads. `toronto_FSA` and
+#    `toronto_permits_2021` carry many unused columns (raw permit fields,
+#    census vectors, etc.) that otherwise get serialized into the widget's
+#    embedded GeoJSON for every single row.
+toronto_FSA_map <- toronto_FSA |>
+  select(DBUID, Denisty)
+
+toronto_permits_2021_map <- toronto_permits_2021 |>
+  select(change, pop_up)
+
+# 2) Simplify the dissemination-block boundaries. These blocks are tiny
+#    (city-block sized) and carry far more coordinate precision than is
+#    visible at any zoom level a website visitor uses. `keep_shapes = TRUE`
+#    guarantees every polygon survives (none are dropped) -- only the
+#    number of vertices per polygon shrinks, and shared borders between
+#    neighbouring blocks are preserved so there are no gaps/slivers.
+toronto_FSA_map <- ms_simplify(
+  toronto_FSA_map,
+  keep = 0.1,
+  keep_shapes = TRUE
+)
+
 pal_dens <- colorFactor(
   palette = c("#F3EFFD", "#D9CFFB", "#BAABF5", "#9885ED", "#7660E0", "#5A3EC8", "#4228A8", "#2E1880", "#1E0E60", "#100740"),
-  domain = toronto_FSA$Denisty
+  domain = toronto_FSA_map$Denisty
 )
 
 permit_colour <- colorFactor(palette = c("orange", "#004D2C"),
                           domain = toronto_permits$change)
 
-leaflet(toronto_FSA) |>
-addProviderTiles("CartoDB.Positron") |>
+leaflet(toronto_FSA_map, options = leafletOptions(preferCanvas = TRUE)) |>
+addProviderTiles("CartoDB.Positron",
+                  options = providerTileOptions(updateWhenZooming = FALSE, updateWhenIdle = TRUE)) |>
     addFullscreenControl() |>
-  addMapPane("top_layer_pane", zIndex = 450) |> 
+  addMapPane("top_layer_pane", zIndex = 450) |>
   addPolygons(
     fillColor = ~pal_dens(Denisty),
     color = "black",
-    weight = 1,
+    weight = 0.4,
     fillOpacity = 0.6,
     # label = ~paste(`Canadidate and Party`),
      popupOptions = popupOptions(closeOnClick = FALSE),
     group = "Building Permits (2020-2021)"
-  )|> 
+  )|>
     addCircleMarkers(
-      data = toronto_permits_2021,
+      data = toronto_permits_2021_map,
       radius = 2,
     color = ~permit_colour(change),
-    weight = 1,
+    stroke = FALSE,
     fillOpacity = 0.2,
     group = "Building Permits (2020-2021)",
     popupOptions = popupOptions(closeOnClick = FALSE),
     options = pathOptions(
-       popup_base = toronto_permits_2021$pop_up
+       popup_base = toronto_permits_2021_map$pop_up
 
     )
   ) |>
-  # 
+  #
   # addPolygons(
   #   fillColor = ~pal_dens(Denisty),
   #   color = "black",
