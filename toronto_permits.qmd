@@ -68,7 +68,17 @@ pal_dens <- colorFactor(
 permit_colour <- colorFactor(palette = c("orange", "#004D2C"),
                           domain = toronto_permits$change)
 
-leaflet(toronto_FSA_map, options = leafletOptions(preferCanvas = TRUE)) |>
+leaflet(toronto_FSA_map, options = leafletOptions(
+    preferCanvas = TRUE,
+    # Safari's WebKit engine handles the CSS-transform zoom/pan animation
+    # much worse than Chrome/Firefox once thousands of canvas features are
+    # on screen -- it tends to stutter or momentarily lock up mid-animation.
+    # Turning the animation off makes zoom/pan an instant redraw instead,
+    # which is a bit less smooth-looking but far more reliable in Safari.
+    zoomAnimation = FALSE,
+    markerZoomAnimation = FALSE,
+    fadeAnimation = FALSE
+  )) |>
 addProviderTiles("CartoDB.Positron",
                   options = providerTileOptions(updateWhenZooming = FALSE, updateWhenIdle = TRUE)) |>
     addFullscreenControl() |>
