@@ -1,0 +1,244 @@
+---
+title: "Bixing to the World Cup"
+subtitle: "How did bike share use in Montréal change during World Cup matches?"
+author: "Your Name"
+date: "2026-07-01"
+format:
+  html:
+    page-layout: article
+execute:
+  echo: false
+---
+
+```{=html}
+<!--
+How it fits together:
+  - `prep-data` (R, runs at render): reads data/match_day.csv, smooths each
+    series, averages 10-minute bins for the tooltip, and hands everything to
+    the browser with ojs_define().
+  - `{ojs}` cells: draw the charts with Observable Plot. No R runs in the
+    reader's browser, so the page loads instantly and works on GitHub Pages.
+
+Previous shinylive version: archive/bixi-world-cup-shinylive.qmd
+-->
+```
+
+```{r}
+#| label: prep-data
+#| message: false
+library(dplyr)
+library(tidyr)
+
+# ---- Settings ---------------------------------------------------------------
+
+matches <- data.frame(
+  match_id = c("can_mar", "final"),
+  title    = c("Canada vs. Morocco", "World Cup Final"),
+  date     = as.Date(c("2026-07-04", "2026-07-19")),
+  kickoff  = c("13:00", "15:00"),
+  end      = c("15:00", "18:02"),  # end of shaded match window (final whistle)
+  baseline = c("Average of prior Saturdays in June",
+               "Average of prior Sundays (June 14 – July 12)"),
+  stringsAsFactors = FALSE
+)
+
+window_before <- 180  # minutes shown before kickoff
+window_after  <- 300  # minutes shown after kickoff
+smooth_k      <- 15   # rolling-mean window (minutes)
+hover_bin     <- 10   # tooltip bin (minutes)
+
+
+# ---- Data -------------------------------------------------------------------
+
+hhmm_to_min <- function(x) {
+  as.integer(substr(x, 1, 2)) * 60 + as.integer(substr(x, 4, 5))
+}
+
+matches <- matches %>%
+  mutate(ko = hhmm_to_min(kickoff),
+         fw = hhmm_to_min(end),
+         x0 = ko - window_before,
+         x1 = ko + window_after,
+         header = paste0(format(date, "%A, %B "), as.integer(format(date, "%d")),
+                         format(date, ", %Y"), " · Kickoff ", kickoff),
+         day_label = paste(format(date, "%B"), as.integer(format(date, "%d"))))
+
+# Times come in as "HH:MM" (Start_time_mins); minutes with no trips are
+# filled with 0, so filler rows without a time are dropped first.
+trips <- read.csv("data/match_day.csv") %>%
+  filter(!is.na(match_id), !is.na(Start_time_mins)) %>%
+  transmute(match_id, area,
+            series = ifelse(Day == "Match Day", "Match day", "Baseline"),
+            minute = hhmm_to_min(Start_time_mins),
+            trips  = Number_of_trips) %>%
+  complete(nesting(match_id, area, series), minute = 0:1439,
+           fill = list(trips = 0)) %>%
+  inner_join(matches %>% select(match_id, x0, x1), by = "match_id")
+
+# Smoothed lines (smoothed over the full day, then cut to the chart window)
+lines <- trips %>%
+  arrange(match_id, area, series, minute) %>%
+  group_by(match_id, area, series) %>%
+  mutate(smooth = as.numeric(stats::filter(trips, rep(1 / smooth_k, smooth_k),
+                                           sides = 2))) %>%
+  ungroup() %>%
+  filter(minute >= x0, minute <= x1, !is.na(smooth)) %>%
+  transmute(match_id, area, series, minute, smooth = round(smooth, 2))
+
+# Tooltip values: mean trips/min of the raw counts in each bin
+bins <- trips %>%
+  filter(minute >= x0, minute < x1) %>%
+  mutate(bin = minute %/% hover_bin * hover_bin) %>%
+  group_by(match_id, area, series, bin) %>%
+  summarise(trips = mean(trips), .groups = "drop") %>%
+  pivot_wider(names_from = series, values_from = trips) %>%
+  rename(md = `Match day`, bl = Baseline) %>%
+  filter(!is.na(md), !is.na(bl))
+
+ojs_define(
+  lines_data   = lines,
+  bins_data    = bins,
+  matches_data = matches %>% select(-date),
+  area_list    = unique(trips$area),
+  hover_bin    = hover_bin
+)
+```
+
+```{=html}
+<style>
+  .plot-wrap { position: relative; }
+  .hover-tip {
+    position: absolute; pointer-events: none; z-index: 10; display: none;
+    background: #1f2a30; color: #fff; border-radius: 6px; padding: 8px 10px;
+    font-size: 0.85rem; line-height: 1.5; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+  .hover-swatch { display: inline-block; width: 10px; height: 10px;
+                  border-radius: 2px; margin-right: 6px; }
+  .hover-diff { color: #c9d1d6; }
+  .chart-legend { font-size: 0.85rem; display: flex; gap: 1.25rem; margin-bottom: 0.25rem; }
+  .chart-legend .key { display: inline-block; width: 18px; height: 3px;
+                       vertical-align: middle; margin-right: 6px; }
+</style>
+```
+
+Intro paragraph: what this page looks at and why.
+
+Select which stations to include, and hover over a chart to compare the match day to the baseline in 10-minute blocks.
+
+```{ojs}
+//| output: false
+Plot = import("https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/+esm")
+
+lines   = transpose(lines_data)
+bins    = transpose(bins_data)
+matches = transpose(matches_data)
+
+colors = ({"Match day": "#ee3124", "Baseline": "#8A8A8A"})
+
+fmtTime = m =>
+  `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`
+
+minToLabel = m => {
+  const h = Math.floor(m / 60) % 24;
+  return `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "am" : "pm"}`;
+}
+
+legend = () => html`<div class="chart-legend">
+  ${Object.entries(colors).map(([k, c]) =>
+    html`<span><span class="key" style="background:${c}"></span>${k}</span>`)}
+</div>`
+
+function matchChart(m, area, w) {
+  const d = lines.filter(r => r.match_id === m.match_id && r.area === area);
+  if (d.length === 0) {
+    return html`<p class="text-muted fst-italic my-4">No data for this match / area yet.</p>`;
+  }
+  const b = bins.filter(r => r.match_id === m.match_id && r.area === area);
+  const ymax = d3.max(d, r => r.smooth) * 1.1;
+
+  const plot = Plot.plot({
+    width: w, height: 320,
+    marginLeft: 50, marginRight: 25, marginBottom: 45,
+    x: {domain: [m.x0, m.x1], ticks: d3.range(Math.ceil(m.x0 / 60) * 60, m.x1 + 1, 60),
+        tickFormat: minToLabel, label: "Departure time",
+        labelAnchor: "center", labelArrow: "none", labelOffset: 38},
+    y: {domain: [0, ymax], grid: true, label: "Bixi trips per minute",
+        labelAnchor: "center", labelArrow: "none"},
+    color: {domain: Object.keys(colors), range: Object.values(colors)},
+    marks: [
+      Plot.rect([m], {x1: "ko", x2: "fw", y1: 0, y2: ymax,
+                      fill: "#F2E8C9", fillOpacity: 0.6}),
+      Plot.text([m], {x: r => (r.ko + r.fw) / 2, y: ymax, dy: 10,
+                      text: () => "Match", fill: "#7A6A3A", fontSize: 12}),
+      // highlighted bin under the pointer; drives the tooltip below
+      Plot.rect(b, Plot.pointerX({x1: "bin", x2: r => r.bin + hover_bin,
+                                  y1: 0, y2: ymax, px: r => r.bin + hover_bin / 2,
+                                  maxRadius: Infinity,
+                                  fill: "currentColor", fillOpacity: 0.06})),
+      Plot.line(d, {x: "minute", y: "smooth", z: "series", stroke: "series",
+                    strokeWidth: 1.6}),
+      Plot.ruleY([0])
+    ]
+  });
+
+  const tip  = html`<div class="hover-tip"></div>`;
+  const wrap = html`<div class="plot-wrap">${plot}${tip}</div>`;
+  const sign = v => (v >= 0 ? "+" : "");
+
+  wrap.addEventListener("pointermove", e => {
+    tip.style.top = `${e.clientY - wrap.getBoundingClientRect().top}px`;
+  });
+
+  plot.addEventListener("input", () => {
+    const v = plot.value;
+    if (!v) { tip.style.display = "none"; return; }
+    const mid   = v.bin + hover_bin / 2;
+    const scale = plot.getBoundingClientRect().width / w;  // svg may be shrunk
+    const x     = plot.scale("x").apply(mid) * scale;
+    const flip  = mid > (m.x0 + m.x1) / 2;
+    const diff  = v.md - v.bl;
+    const pct   = v.bl > 0 ? ` (${sign(diff)}${(100 * diff / v.bl).toFixed(1)}%)` : "";
+    tip.innerHTML = `
+      <strong>${fmtTime(v.bin)} – ${fmtTime(v.bin + hover_bin)}</strong>
+      <div><span class="hover-swatch" style="background:${colors["Match day"]}"></span>${m.day_label}: ${Math.round(v.md)} trips/min</div>
+      <div><span class="hover-swatch" style="background:${colors.Baseline}"></span>Baseline: ${Math.round(v.bl)} trips/min</div>
+      <div class="hover-diff">${sign(diff)}${diff.toFixed(1)}${pct}</div>`;
+    tip.style.left = `${x + (flip ? -14 : 14)}px`;
+    tip.style.transform = flip ? "translate(-100%, -50%)" : "translateY(-50%)";
+    tip.style.display = "block";
+  });
+
+  return wrap;
+}
+```
+
+```{ojs}
+viewof area = Inputs.radio(area_list, {label: "Stations included", value: area_list[0]})
+```
+
+```{ojs}
+html`${matches.map(m => html`<div class="card mb-4">
+  <div class="card-header">
+    <h4 class="mb-1">${m.title}</h4>
+    <div class="text-muted small">${m.header}</div>
+  </div>
+  <div class="card-body">
+    <div class="text-muted small fst-italic mb-2">Baseline: ${m.baseline}</div>
+    ${legend()}
+    ${matchChart(m, area, width - 34)}
+  </div>
+</div>`)}`
+```
+
+## Data & Methods
+
+Describe the data source (Bixi open data), the period covered and any cleaning steps.
+
+Describe how the baseline days were chosen.
+
+Describe how stations were filtered by distance, if applicable.
+
+------------------------------------------------------------------------
+
+*Data: Bixi Montréal open data.*
