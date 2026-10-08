@@ -1,8 +1,8 @@
 ---
 title: "Bixing to the World Cup"
 subtitle: "How did bike share use in Montréal change during World Cup matches?"
-author: "Your Name"
-date: "2026-07-01"
+author: "Rafael Campos-Gottardo"
+date: "2026-10"
 format:
   html:
     page-layout: article
@@ -122,7 +122,6 @@ ojs_define(
 </style>
 ```
 
-Intro paragraph: what this page looks at and why.
 
 Select which stations to include, and hover over a chart to compare the match day to the baseline in 10-minute blocks.
 
@@ -233,12 +232,8 @@ html`${matches.map(m => html`<div class="card mb-4">
 
 ## Data & Methods
 
-Describe the data source (Bixi open data), the period covered and any cleaning steps.
 
-Describe how the baseline days were chosen.
-
-Describe how stations were filtered by distance, if applicable.
 
 ------------------------------------------------------------------------
 
-*Data: Bixi Montréal open data.*
+*Data: Bixi open data.*
