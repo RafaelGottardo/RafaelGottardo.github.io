@@ -27,7 +27,7 @@ This project maps the 2026 Montreal Election Results, and allows users to overla
 ::::: columns
 ::: {.column width="40%"}
 
-This dashboard shows how the impact of the World Cup on Bixi usage in Montreal. It was created using Bixi's open data and R for data visualization.
+This dashboard shows the impact of the World Cup on BIXI usage in Montreal. It was created using Bixi's open data and R for data visualization.
 
 *This is an early prototype*
 

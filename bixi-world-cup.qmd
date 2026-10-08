@@ -1,5 +1,5 @@
 ---
-title: "Bixing to the World Cup"
+title: "BIXIing to the World Cup"
 subtitle: "How did bike share use in Montréal change during World Cup matches?"
 author: "Rafael Campos-Gottardo"
 date: "2026-10"
