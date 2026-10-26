@@ -1,5 +1,6 @@
 ---
 title: "Permits for Edmonton Infill"
+page-layout: full
 ---
 
 ```{r, echo=FALSE, warning=FALSE, include=FALSE}
@@ -546,7 +547,7 @@ db_census_map <- db_census_map %>%
 add_census_legends <- function(map) {
   for (layer in census_layers) {
     map <- map |>
-      addLegend(position = "bottomright",
+      addLegend(position = "bottomleft",
                 colors = c(layer$legend_colours, census_na_colour),
                 labels = c(layer$legend_labels, "No data"),
                 title = layer$label, opacity = 0.7,
@@ -556,6 +557,8 @@ add_census_legends <- function(map) {
 }
 
 permit_map <- leaflet(Edmonton,
+        # Fill most of the browser window instead of leaflet's default 400px
+        width = "100%", height = "85vh",
         options = leafletOptions(
           preferCanvas = TRUE,
           # Safari's WebKit engine handles the CSS-transform zoom/pan animation
@@ -584,7 +587,7 @@ permit_map <- leaflet(Edmonton,
   ) |>
   addLegend(
     data = permits,
-    "bottomright",
+    "bottomleft",
     pal = permit_colour,
     values = ~`building_type`,
     title = "Permit Type"
@@ -698,6 +701,7 @@ permit_map <- leaflet(Edmonton,
 ```
 
 ```{r echo=FALSE, warning=FALSE}
+#| column: screen-inset
 permit_map
 ```
 

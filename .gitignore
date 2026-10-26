@@ -6,6 +6,7 @@
 .DS_Store
 .quarto
 .positai
+.RDataTmp
 
 Data/data_raw/*
 
