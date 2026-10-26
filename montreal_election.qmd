@@ -88,6 +88,7 @@ shp <- shp %>%
   mutate(`Canadidate and Party` = replace(`Canadidate and Party`, is.na(`Canadidate and Party`), "No Votes"))
 ```
 
+
 ```{r echo=FALSE, include=FALSE, warning=FALSE}
 
 library(cancensus)
@@ -146,6 +147,64 @@ bike_lanes_mtl <- st_intersection(bike_lanes, montreal_island)
 ```
 
 ```{r echo=FALSE, warning=FALSE}
+
+# Import Ruelles Verts
+
+green_lanes <- read_sf("data/data_raw/map_layers/ruelles-vertes.geojson")
+
+green_lanes <- green_lanes %>% 
+  mutate(Open_to_traffic = ifelse(CIRCULATION == "Ouverte", "Yes", "No"))
+
+```
+
+
+```{r echo=FALSE, warning=FALSE}
+
+# On-street parking spots, estimated in parking_spots.R
+
+parking <- readRDS("data/parking_spots.rds") %>%
+  st_transform(st_crs(shp))
+
+# Assign each curb stretch (by a point on it) and paid spot to a polling district
+parking_district <- parking %>%
+  st_point_on_surface() %>%
+  st_join(shp %>% select(CODE_SECT), join = st_within) %>%
+  st_drop_geometry() %>%
+  filter(!is.na(CODE_SECT)) %>%
+  group_by(CODE_SECT) %>%
+  summarise(
+    free_spots = sum(n_spots[parking_type == "Free"]),
+    permit_spots = sum(n_spots[parking_type == "Permit"]),
+    paid_spots = sum(n_spots[parking_type == "Paid"]),
+    # Share of the district's curbs in boroughs without a complete sign inventory
+    no_sign_data = sum(usable_length[parking_type == "No sign data"]) /
+      sum(usable_length[parking_type != "Paid"])
+  )
+
+shp <- shp %>%
+  left_join(parking_district, by = "CODE_SECT") %>%
+  mutate(
+    across(c(free_spots, permit_spots, paid_spots), \(x) replace_na(x, 0)),
+    no_sign_data = replace_na(no_sign_data, 0),
+    parking_summary = ifelse(
+      no_sign_data > 0.5,
+      paste0("Free: <span style='color:#999'>no sign data for this borough</span><br>",
+             "Permit: <span style='color:#999'>no sign data for this borough</span><br>"),
+      paste0("Free: <strong>", format(free_spots, big.mark = ",", trim = TRUE), "</strong><br>",
+             "Permit: <strong>", format(permit_spots, big.mark = ",", trim = TRUE), "</strong><br>")
+    ),
+    parking_summary = paste0(parking_summary,
+                             "Paid: <strong>", format(paid_spots, big.mark = ",", trim = TRUE), "</strong>")
+  )
+
+parking <- parking %>%
+  filter(parking_type != "No sign data") %>%
+  st_transform(4326)
+
+```
+
+
+```{r echo=FALSE, warning=FALSE}
 library(leaflet)
 library(leaflet.extras)
 
@@ -155,7 +214,11 @@ library(purrr)
 
 shp_proj <- st_transform(shp, 3857)
 bike_proj <- st_transform(bike_mtl, 3857)
+green_lanes <- st_transform(green_lanes, 3857)
 bike_proj <- st_cast(bike_proj, "LINESTRING")
+
+# Unbuffered district outlines, kept for drawing the map
+district_outlines <- st_geometry(shp_proj)
 
 # Small buffer around each district to capture lines along boundaries
 shp_buffered <- st_buffer(shp_proj, 1)  # 1 meter buffer
@@ -186,6 +249,16 @@ shp_proj <- shp_buffered %>%
     })
   )
 
+# Flag whether each district contains a green lane
+shp_proj <- shp_proj %>%
+  mutate(
+    green_summary = ifelse(
+      lengths(st_intersects(shp_proj, green_lanes)) > 0,
+      "<strong>Yes</strong>",
+      "<span style='color:#999'>No</span>"
+    )
+  )
+
 shp <- shp_proj %>%
   mutate(
     popup_base = paste0(
@@ -202,11 +275,23 @@ shp <- shp_proj %>%
       
     ),
 
+    # Sections appended to popup_base in onRender depending on active layers
     popup_bike = paste0(
-      popup_base,
       "<hr>",
       "<strong>🚲 Bike lanes</strong><br>",
       bike_summary
+     ),
+
+    popup_green = paste0(
+      "<hr>",
+      "<strong>🌿 Green lane in district</strong><br>",
+      green_summary
+     ),
+
+    popup_parking = paste0(
+      "<hr>",
+      "<strong>🅿️ On-street parking spots (est.)</strong><br>",
+      parking_summary
      )#,
     # 
     # popup_demo = paste0(
@@ -221,13 +306,13 @@ shp <- shp_proj %>%
 
 shp <- shp %>% 
   mutate(`Canadidate and Party` = factor(`Canadidate and Party`,
-                                         levels = c("Indépendant: Jean Duval",
-                                                    "Futur Montréal: Jean-François Kacou",
-                                                    "Ensemble Montréal: Soraya Martinez Ferrada",
+                                         levels = c("Ensemble Montréal: Soraya Martinez Ferrada",
                                                     "Projet Montréal: Luc Rabouin",
-                                                    "Idépendant: Katy Le Rougetel",
-                                                    "Action Montréal: Gilbert Thibodeau",
                                                     "Transition Montréal: Craig Sauvé",
+                                                     "Futur Montréal: Jean-François Kacou",
+                                                    "Action Montréal: Gilbert Thibodeau",
+                                                    "Idépendant: Katy Le Rougetel",
+                                                    "Indépendant: Jean Duval",
                                                     "No Votes"
           )))
 
@@ -236,15 +321,40 @@ pal <- colorFactor(
   domain = shp$`Canadidate and Party`
 )
 
+pal_parking <- colorFactor(
+  palette = c("#00e5ff", "#ffd700", "#ff00ff"),
+  domain = c("Free", "Permit", "Paid")
+)
+
 # pal_bike <- colorFactor(
 #   domain = bike_lanes_mtl$cycleway,
 #   palette = c("green", "blue", "orange", "red", "white")
 # )
 bike_proj <- st_transform(bike_proj, crs = 4326)
+green_lanes <- st_transform(green_lanes, crs = 4326)
 shp_proj <- st_transform(shp_proj, crs = 4326)
- 
+
+# Keep the page small: draw simplified district outlines (shared borders stay
+# aligned) and round all coordinates to 5 decimals (~1 m)
+st_geometry(shp_proj) <- district_outlines %>%
+  rmapshaper::ms_simplify(keep = 0.2, keep_shapes = TRUE) %>%
+  st_transform(crs = 4326)
+
+round_coords <- function(x) {
+  st_geometry(x) <- st_geometry(x) %>%
+    st_set_precision(1e5) %>%
+    st_as_binary() %>%
+    st_as_sfc(crs = 4326)
+  x
+}
+
+shp_proj <- round_coords(shp_proj)
+bike_proj <- round_coords(bike_proj)
+green_lanes <- round_coords(green_lanes)
+parking <- round_coords(parking)
+
   
-leaflet(shp_proj) |>
+election_map <- leaflet(shp_proj) |>
   addTiles() |>
     addFullscreenControl() |>
   addPolygons(
@@ -257,6 +367,8 @@ leaflet(shp_proj) |>
     options = pathOptions(
       popup_base = shp$popup_base,
       popup_bike = shp$popup_bike,
+      popup_green = shp$popup_green,
+      popup_parking = shp$popup_parking,
       #popup_demo = districts$popup_demo
     ),
     group = "Electoral Districts"
@@ -276,56 +388,107 @@ leaflet(shp_proj) |>
     opacity = 0.9,
     group = "Bike Lanes"
   ) |>
+    addPolygons(
+    data = green_lanes,
+    color = "green",
+    fillColor = "green",
+    weight = 1,
+    fillOpacity = 0.9,
+    label = ~paste("Open to traffic:", Open_to_traffic),
+    group = "Green Lanes"
+  ) |>
+    addPolylines(
+    data = filter(parking, parking_type == "Free"),
+    color = pal_parking("Free"),
+    weight = 2,
+    opacity = 0.9,
+    label = ~paste0("Free: ", n_spots, " spots"),
+    group = "Parking"
+  ) |>
+    addPolylines(
+    data = filter(parking, parking_type == "Permit"),
+    color = pal_parking("Permit"),
+    weight = 2,
+    opacity = 0.9,
+    label = ~paste0("Permit: ", n_spots, " spots"),
+    group = "Parking"
+  ) |>
+    addCircleMarkers(
+    data = filter(parking, parking_type == "Paid"),
+    color = pal_parking("Paid"),
+    radius = 2,
+    stroke = FALSE,
+    fillOpacity = 0.9,
+    label = "Paid: 1 spot",
+    group = "Parking"
+  ) |>
   addLegend(
     "bottomright",
     pal = pal,
     values = ~`Canadidate and Party`,
     title = "Party"
-  ) %>% 
+  ) %>%
+  addLegend(
+    "bottomleft",
+    pal = pal_parking,
+    values = c("Free", "Permit", "Paid"),
+    title = "Parking",
+    group = "Parking"
+  ) %>%
    addLayersControl(
-     overlayGroups = c("Electoral Districts", "Bike Lanes"),
+     overlayGroups = c("Electoral Districts", "Bike Lanes", "Green Lanes", "Parking"),
     options = layersControlOptions(collapsed = FALSE)
-  ) %>% 
+  ) %>%
    hideGroup(c(
-    "Bike Lanes"
-  )) %>% 
+    "Bike Lanes",
+    "Green Lanes",
+    "Parking"
+  )) %>%
   onRender("
     function(el, x) {
       var map = this;
 
-      function updatePopups(mode) {
+      // Popup sections to show for each overlay
+      var sections = {
+        'Bike Lanes': 'popup_bike',
+        'Green Lanes': 'popup_green',
+        'Parking': 'popup_parking',
+        'Demographics': 'popup_demo'
+      };
+      var active = {};
+
+      function updatePopups() {
         map.eachLayer(function(layer) {
           if (layer.options && layer.options.popup_base) {
-            var html;
-            if (mode === 'bike') {
-              html = layer.options.popup_bike;
-            } else if (mode === 'demo') {
-              html = layer.options.popup_demo;
-            } else {
-              html = layer.options.popup_base;
-            }
+            var html = layer.options.popup_base;
+            Object.keys(sections).forEach(function(name) {
+              if (active[name] && layer.options[sections[name]]) {
+                html += layer.options[sections[name]];
+              }
+            });
             layer.bindPopup(html, { closeOnClick: false });
           }
         });
       }
 
       map.on('overlayadd', function(e) {
-        if (e.name === 'Bike Lanes') {
-          updatePopups('bike');
-        }
-        if (e.name === 'Demographics') {
-          updatePopups('demo');
-        }
+        active[e.name] = true;
+        updatePopups();
       });
 
       map.on('overlayremove', function(e) {
-        updatePopups('base');
+        active[e.name] = false;
+        updatePopups();
       });
 
-      updatePopups('base');
+      updatePopups();
     }
   ")
- 
+
+# Write at most 5 decimals to the page (coordinates are already rounded)
+attr(election_map$x, "TOJSON_ARGS") <- list(digits = 5, use_signif = FALSE)
+election_map
+
   
 ```
 

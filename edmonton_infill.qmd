@@ -1,0 +1,703 @@
+---
+title: "Permits for Edmonton Infill"
+---
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+library(sf)
+library(tidyverse)
+library(leaflet)
+library(leaflet.extras)
+library(sf)
+library(tidyverse)
+library(leaflet)
+library(leaflet.extras)
+
+library(osmdata)
+library(osmextract)
+library(htmltools)
+library(htmlwidgets)
+library(units)
+library(lwgeom)
+library(scales)
+carto_key <- "cb1_4lt2_1_210d4d5d87f1d65475971ef6"
+# CARTO basemaps now need the key as a `key` query parameter on the tile URL;
+# addProviderTiles("CartoDB.Positron") can't add it, so build the URL ourselves.
+carto_url <- paste0("https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=", carto_key)
+carto_attr <- '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+# Used below to shrink the dissemination-block polygons that get embedded in
+# the rendered page. Installed once if missing.
+if (!requireNamespace("rmapshaper", quietly = TRUE)) install.packages("rmapshaper")
+library(rmapshaper)
+
+permits <- read_sf("data/data/General_Building_Permits_20261015.geojson")
+zoning <- read_sf("data/data/Zoning_Bylaw_Geographical_Data_20261021.geojson")
+
+
+
+demos <- permits %>% 
+  mutate(Demolition = ifelse(work_type == "(99) Demolition", 1, 0))
+
+permits <- permits %>% 
+  filter(building_type %in% c("Apartments (310)", "Duplex (210)",
+                              "Mixed Use (522)", "Single Detached House (110)",
+                              "Semi Detached Condo (215)",
+                              "Semi Detached House (210)",
+                              "Semi-Detached House (210)",
+                              "Row House (330)", "Row Houses (330)",
+                              "Backyard House (110)", "Apartment (310)", 
+                              "Row House Condo (335)", "Apartment Condos (315)"
+  ) & work_type %in% c("(01) New", "(01) Building - New",  "(07) Add Suites to Single Dwelling"))
+
+permits <- permits %>% 
+  mutate(building_type = case_when(building_type %in% c("Apartments (310)", "Apartment (310)", "Apartment Condos (315)") ~ "Apartment",
+                                   building_type == "Mixed Use (522)" ~ "Mixed Use",
+                                   building_type %in% c("Single Detached House (110)") ~ "Single Family Home",
+                                   building_type %in% c("Row House (330)", "Row Houses (330)", "Row House Condo (335)") ~ "Row House",
+                                   building_type %in% c("Backyard House (110)") ~ "Backyard House",
+                                   building_type %in% c("Duplex (210)", 
+                                                        "Semi Detached Condo (215)",
+                                                        "Semi Detached House (210)",
+                                                        "Semi-Detached House (210)") ~ "Duplex/Semi-Detatched"
+                                                        ))
+
+permits_2016 <- permits %>% 
+  filter(issue_date >= "2016-01-01" & issue_date < "2024-01-01")
+
+permits <- permits %>% 
+  filter(issue_date >= "2024-01-01")
+
+
+unique(  permits$building_type)
+Edmonton <- read_sf("data/data/City_of_Edmonton_-_Corporate_Boundary_(current)_20261015.geojson")
+Edmonton <- st_transform(Edmonton, crs = 4326)
+permits <- st_transform(permits, crs = 4326)
+
+permit_colour <- colorFactor(palette = c("orange", "#004D2C", "purple3", "darkblue", "darkred", "black"),
+                             domain = permits$building_type)
+
+permits <- permits %>% 
+  mutate(pop_up = paste0("<b>Building Type:</b> ", building_type, "<br>",
+                                    "<b>Description:</b> ", job_description, "<br>",
+                                    "<b>Date:</b> ", permit_date,  "<br>"
+))
+
+#### 2021 Census demographics by dissemination block ####
+# StatCan only publishes population, dwellings and households at the
+# dissemination-block (DB) level. Everything else (dwelling type, income,
+# immigration, age, tenure) is released for dissemination areas (DAs), so we
+# pull the DA profile and attach it to every block inside that DA. Density is
+# the one measure computed at true block resolution.
+# Requires CM_API_KEY in ~/.Renviron (set via cancensus::set_cancensus_api_key()).
+library(cancensus)
+
+edmonton_csd <- list(CSD = "4811061")
+
+census_vectors <- c(
+  # Structural type of dwelling (occupied private dwellings)
+  dwell_total     = "v_CA21_434",
+  single_detached = "v_CA21_435",
+  semi_detached   = "v_CA21_436",
+  row_house       = "v_CA21_437",
+  duplex_apt      = "v_CA21_438",
+  lowrise_apt     = "v_CA21_439", # apartment, fewer than 5 storeys
+  tower_apt       = "v_CA21_440", # apartment, 5 or more storeys
+  other_attached  = "v_CA21_441",
+  movable         = "v_CA21_442",
+  # Income
+  median_hh_income = "v_CA21_906",
+  # Immigration status (population in private households)
+  imm_total      = "v_CA21_4404",
+  non_immigrants = "v_CA21_4407",
+  immigrants     = "v_CA21_4410",
+  non_permanent  = "v_CA21_4434",
+  # Age
+  age_total  = "v_CA21_8",
+  age_0_14   = "v_CA21_11",
+  age_65plus = "v_CA21_251",
+  median_age = "v_CA21_389",
+  # Tenure
+  tenure_total = "v_CA21_4237",
+  owner        = "v_CA21_4238",
+  renter       = "v_CA21_4239",
+  # Period of construction (occupied private dwellings)
+  built_pre1961   = "v_CA21_4264",
+  built_1961_1980 = "v_CA21_4265",
+  built_1981_1990 = "v_CA21_4266",
+  built_1991_2000 = "v_CA21_4267",
+  built_2001_2005 = "v_CA21_4268",
+  built_2006_2010 = "v_CA21_4269",
+  built_2011_2015 = "v_CA21_4270",
+  built_2016_2021 = "v_CA21_4271",
+  # Household type (private households)
+  hh_total           = "v_CA21_543",
+  hh_couple_kids     = "v_CA21_546",
+  hh_couple_no_kids  = "v_CA21_547",
+  hh_one_parent      = "v_CA21_548",
+  hh_multigen        = "v_CA21_549",
+  hh_multi_family    = "v_CA21_550",
+  hh_family_plus     = "v_CA21_551", # one family with additional persons
+  hh_roommates       = "v_CA21_552", # two or more people, not a family
+  hh_one_person      = "v_CA21_553"
+)
+
+# Census only gives period-of-construction counts, so average dwelling age is
+# estimated from each period's midpoint year (1950 assumed for "1960 or before").
+built_midpoints <- c(built_pre1961 = 1950, built_1961_1980 = 1970.5,
+                     built_1981_1990 = 1985.5, built_1991_2000 = 1995.5,
+                     built_2001_2005 = 2003, built_2006_2010 = 2008,
+                     built_2011_2015 = 2013, built_2016_2021 = 2018.5)
+avg_dwelling_age <- function(df) {
+  counts <- as.matrix(as.data.frame(df)[names(built_midpoints)])
+  2021 - drop(counts %*% built_midpoints) / rowSums(counts)
+}
+
+da_census <- get_census(dataset = "CA21", regions = edmonton_csd, level = "DA",
+                        vectors = census_vectors, quiet = TRUE) %>%
+  mutate(avg_dwelling_age = avg_dwelling_age(.)) %>%
+  transmute(
+    DA_UID = GeoUID,
+    da_population = Population,
+    pct_single_detached = single_detached / dwell_total,
+    pct_semi_detached   = semi_detached / dwell_total,
+    pct_row_house       = row_house / dwell_total,
+    pct_duplex          = duplex_apt / dwell_total,
+    pct_lowrise_apt     = lowrise_apt / dwell_total,
+    pct_tower           = tower_apt / dwell_total,
+    pct_other_dwelling  = (other_attached + movable) / dwell_total,
+    median_hh_income,
+    pct_immigrant     = immigrants / imm_total,
+    pct_non_permanent = non_permanent / imm_total,
+    pct_age_0_14   = age_0_14 / age_total,
+    pct_age_65plus = age_65plus / age_total,
+    median_age,
+    pct_owner  = owner / tenure_total,
+    pct_renter = renter / tenure_total,
+    renter = renter,
+    tenure_total = tenure_total,
+    avg_dwelling_age,
+    pct_hh_couple_kids    = hh_couple_kids / hh_total,
+    pct_hh_couple_no_kids = hh_couple_no_kids / hh_total,
+    pct_hh_one_parent     = hh_one_parent / hh_total,
+    pct_hh_one_person     = hh_one_person / hh_total,
+    pct_hh_multigen       = hh_multigen / hh_total,
+    pct_hh_roommates      = hh_roommates / hh_total,
+    pct_hh_other_family   = (hh_multi_family + hh_family_plus) / hh_total
+  ) %>%
+  # Suppressed / zero-population DAs give 0/0; keep them as NA, not NaN
+  mutate(across(where(is.numeric), ~ ifelse(is.finite(.x), .x, NA_real_)))
+
+db_census <- get_census(dataset = "CA21", regions = edmonton_csd, level = "DB",
+                        geo_format = "sf", quiet = TRUE) %>%
+  transmute(
+    DB_UID = GeoUID,
+    DA_UID,
+    db_population = Population,
+    db_dwellings  = Dwellings,
+    area_km2      = `Shape Area`,
+    pop_density   = ifelse(area_km2 > 0, db_population / area_km2, NA_real_),       # people / km²
+    dwelling_density = ifelse(area_km2 > 0, db_dwellings / area_km2, NA_real_)      # dwellings / km²
+  ) %>%
+  left_join(da_census, by = "DA_UID") %>%
+  st_transform(crs = 4326)
+
+# Population change since 2016, at true block resolution. StatCan doesn't
+# publish 2016 population for 2021 blocks or DAs, and 2016 blocks don't line up
+# exactly with 2021 ones, so 2016 block populations are spread onto 2021 blocks
+# by overlapping area: exact where a block is unchanged, an estimate where it
+# was split or redrawn. The 2016 pull uses the whole CMA so land Edmonton
+# annexed in 2019 still has a 2016 population.
+alberta_crs <- 3400 # NAD83 / Alberta 10-TM (Forest), metres
+db_2016 <- get_census(dataset = "CA16", regions = list(CMA = "48835"), level = "DB",
+                      geo_format = "sf", quiet = TRUE) %>%
+  select(db_pop_2016 = Population) %>%
+  mutate(db_pop_2016 = coalesce(db_pop_2016, 0)) %>%
+  st_transform(alberta_crs) %>%
+  st_make_valid()
+db_census$db_pop_2016 <- st_interpolate_aw(
+  db_2016,
+  st_make_valid(st_transform(db_census, alberta_crs)),
+  extensive = TRUE, keep_NA = TRUE
+)$db_pop_2016 |> round()
+db_census <- db_census %>%
+  mutate(pop_change = db_population - db_pop_2016,
+         # Blocks that were empty in 2016 get Inf, i.e. the top "50%+" bin
+         pct_pop_change = case_when(db_pop_2016 > 0 ~ pop_change / db_pop_2016,
+                                    db_population > 0 ~ Inf,
+                                    TRUE ~ NA_real_))
+
+
+#### Census map layers ####
+# Every stat gets its own radio button in the layer control, but they all share
+# ONE polygon layer: each block carries a pre-computed fill colour per stat
+# (col_<key>) and the onRender JS below recolours the polygons and swaps the
+# legend when the radio button changes. Drawing 15 copies of 7,000+ polygons
+# (each with its own popups) would make the page far too heavy for Safari.
+db_census_map <- ms_simplify(db_census, keep = 0.2, keep_shapes = TRUE)
+
+# Permits (2024+, filtered above) per block and building type, counted against
+# the full-resolution block polygons so simplification can't shift any points.
+permit_types <- sort(unique(na.omit(permits$building_type)))
+db_permit_counts <- permits %>%
+  filter(!st_is_empty(geometry)) %>%
+  st_join(select(db_census, DB_UID), join = st_within) %>%
+  st_drop_geometry() %>%
+  filter(!is.na(DB_UID), !is.na(building_type)) %>%
+  count(DB_UID, building_type) %>%
+  pivot_wider(names_from = building_type, values_from = n, values_fill = 0)
+
+db_demos_count <- demos %>% 
+  select(Demolition, geometry) %>% 
+  filter(!st_is_empty(geometry)) %>%
+  st_join(select(db_census, DB_UID), join = st_within) %>%
+  st_drop_geometry() %>%
+  filter(!is.na(DB_UID), !is.na(Demolition)) %>%
+  count(DB_UID, Demolition) %>% 
+  filter(Demolition == 1) %>% 
+  select(-Demolition) %>% 
+  rename(Demolition = n)
+
+
+# 2024+ permits by zone, using the permit's own `zoning` field rather than a
+# spatial join: about half of these permits (most of them since 2025) have no
+# coordinates, but nearly all record the zone they were issued under, which is
+# already the 2024 bylaw. Permits spanning several lots list more than one zone
+# ("RSF, RSM"); the first is used.
+zoning_2024 <- permits %>%
+  st_drop_geometry() %>%
+  mutate(zone_2024 = str_extract(zoning, "^[^,]+"),
+         zone = case_when(zone_2024 == "RS" ~ "RS",
+                          zone_2024 == "RSF" ~ "RSF",
+                          TRUE ~ "Other"),
+         units = as.numeric(units_added)) %>%
+  group_by(zone, building_type) %>%
+  summarise(permits = n(), units = sum(units, na.rm = TRUE), .groups = "drop")
+
+# Share of each zone's permits, and of its new units, by building type. One
+# row-house or apartment permit can cover many units, so the two differ.
+# `total` is the zone's share of all permits (or units) citywide.
+zoning_2024 %>%
+  pivot_longer(c(permits, units), names_to = "measure") %>%
+  group_by(measure) %>%
+  mutate(city_total = sum(value)) %>%
+  group_by(zone, measure) %>%
+  mutate(total = sum(value) / city_total,
+         value = value / sum(value)) %>%
+  ungroup() %>%
+  select(-city_total) %>%
+  pivot_wider(names_from = building_type, values_from = value, values_fill = 0) %>%
+  arrange(measure, zone)
+permits_table <- permits %>%
+  st_drop_geometry() %>%
+  mutate(zone_2024 = str_extract(zoning, "^[^,]+"),
+         zone = case_when(zone_2024 == "RS" ~ "RS",
+                          zone_2024 == "RSF" ~ "RSF",
+                          TRUE ~ "Other"),
+         units = as.numeric(units_added)) 
+
+permits_table %>% 
+  #filter(zone == "RS") %>% 
+  mutate(high_density = ifelse(units > 5, 1, 0)) %>% 
+  count(zone, high_density) %>% 
+  mutate(prop = n/sum(n))
+
+permits_table %>% 
+  filter(zone == "RS") %>% 
+  mutate(high_density = ifelse(units > 5, 1, 0)) %>% 
+  group_by(neighbourhood) %>% 
+  count(high_density) %>% 
+  ungroup() %>% 
+  filter(high_density == 1) %>% 
+  mutate(prop = n/sum(n), 
+         little_infill = ifelse(prop < 0.01, 1, 0)) %>% 
+  count(little_infill) %>% 
+  mutate(prop = n/sum(n))
+
+# 2016-2023 permits by the zone they sit in on the CURRENT zoning map.
+# Points go first so each permit picks up the zone polygon it falls inside;
+# the permits' own `zoning` column (the zone when the permit was issued) is
+# kept as-is, and the map's zone comes in as zone_2024.
+zoning_2016 <- permits_2016 %>%
+  filter(!st_is_empty(geometry)) %>%
+  st_transform(crs = alberta_crs) %>%
+  st_join(zoning %>%
+            st_make_valid() %>%  # repair duplicate vertices, self-intersections, etc.
+            st_transform(crs = alberta_crs) %>%
+            select(zone_2024 = zoning),
+          join = st_within) %>%
+  st_drop_geometry() %>%
+  mutate(zone = case_when(zone_2024 == "RS" ~ "RS",
+                          zone_2024 == "RSF" ~ "RSF",
+                          TRUE ~ "Other"),
+         units = as.numeric(units_added)) %>%
+  group_by(zone, building_type) %>%
+  summarise(permits = n(), units = sum(units, na.rm = TRUE), .groups = "drop")
+
+# Same layout as the 2024+ table: shares of permits and of units by type.
+zoning_2016 %>%
+  pivot_longer(c(permits, units), names_to = "measure") %>%
+  group_by(measure) %>%
+  mutate(city_total = sum(value)) %>%
+  group_by(zone, measure) %>%
+  mutate(total = sum(value) / city_total,
+         value = value / sum(value)) %>%
+  ungroup() %>%
+  select(-city_total) %>%
+  pivot_wider(names_from = building_type, values_from = value, values_fill = 0) %>%
+  arrange(measure, zone)
+
+  
+db_census_map <- db_census_map %>%
+  left_join(db_permit_counts, by = "DB_UID") %>%
+  mutate(across(all_of(permit_types), ~ coalesce(.x, 0L)),
+         permits_total = rowSums(across(all_of(permit_types))))
+
+db_census_map <- db_census_map %>%
+  left_join(db_demos_count, by = "DB_UID")
+
+
+db_census_map <- db_census_map %>% 
+  mutate(percent_demo = ifelse(is.na(Demolition), 0, Demolition/db_dwellings))
+
+da_permit_counts <- db_census_map %>% 
+  st_drop_geometry() %>% 
+  group_by(DA_UID) %>% 
+  summarise(across(`Row House`:permits_total, \(x)sum(x, na.rm = TRUE))) %>%
+  left_join(da_census, by = "DA_UID")
+
+# Zoning designation for each DA on the 2024 map: the share of its zoned land
+# in RS, RSF and every other zone, and whichever of the three covers the most.
+# Blocks are overlaid on the zoning polygons and the pieces summed by DA.
+# Coordinates are rounded to the centimetre so GEOS doesn't choke on the
+# overlay.
+da_zoning <- db_census %>%
+  select(DA_UID) %>%
+  st_transform(alberta_crs) %>%
+  st_set_precision(100) %>%
+  st_make_valid() %>%
+  st_intersection(zoning %>%
+                    st_transform(alberta_crs) %>%
+                    st_set_precision(100) %>%
+                    st_make_valid() %>%
+                    transmute(zone = case_when(zoning == "RS" ~ "RS",
+                                               zoning == "RSF" ~ "RSF",
+                                               TRUE ~ "Other"))) %>%
+  mutate(area = as.numeric(st_area(geometry))) %>%
+  st_drop_geometry() %>%
+  group_by(DA_UID, zone) %>%
+  summarise(area = sum(area), .groups = "drop") %>%
+  group_by(DA_UID) %>%
+  mutate(share = area / sum(area),
+         zone_designation = zone[which.max(share)]) %>%
+  ungroup() %>%
+  select(-area) %>%
+  pivot_wider(names_from = zone, names_prefix = "pct_zone_",
+              values_from = share, values_fill = 0)
+
+da_permit_counts <- da_permit_counts %>%
+  left_join(da_zoning, by = "DA_UID")
+
+
+da_permit_counts %>% 
+  group_by(zone_designation) %>% 
+  summarise(age = mean(median_hh_income, na.rm = TRUE))
+
+da_permit_counts %>% 
+  mutate(Apartment_p = ifelse(Apartment > 0, "yes", "no"),
+         Row_House_p = ifelse(`Row House` > 0, "yes", "no"),
+         Duplex_p = ifelse(`Duplex/Semi-Detatched` > 0, "yes", "no"),
+         Backyard_p = ifelse(`Backyard House` > 0, "yes", "no"),
+         Mixed_use_p = ifelse(`Mixed Use` > 0, "yes", "no")) %>% 
+  pivot_longer(c(Apartment_p,
+                 Row_House_p,
+                 Duplex_p,
+                 Backyard_p,
+                 Mixed_use_p),
+               names_to = "Housing_type", values_to = "Present") %>% 
+  mutate(Housing_type = paste(Housing_type, Present, sep = "_")) %>% 
+  group_by(Housing_type, zone_designation) %>% 
+  summarise(Income = mean(median_hh_income, na.rm = TRUE),
+            Housing_age = mean(avg_dwelling_age, na.rm = TRUE),
+            percent_rent = sum(renter, na.rm = TRUE)/sum(tenure_total, na.rm = TRUE))
+# "Apartment: 2<br>Duplex: 0<br>..." for each block
+permit_popup_lines <- st_drop_geometry(db_census_map)[permit_types] |>
+  imap(\(n, type) paste0(type, ": ", n, "<br>")) |>
+  reduce(paste0)
+
+census_layers <- list(
+  list(key = "pop_density", label = "Population density",
+       bins = c(0, 1000, 2500, 5000, 10000), unit = " /km²"),
+  list(key = "dwelling_density", label = "Dwelling density",
+       bins = c(0, 400, 1000, 2000, 4000), unit = " /km²"),
+  list(key = "pct_single_detached", label = "Single-detached houses", share = TRUE),
+  list(key = "pct_semi_detached",   label = "Semi-detached houses",   share = TRUE),
+  list(key = "pct_row_house",       label = "Row houses",             share = TRUE),
+  list(key = "pct_duplex",          label = "Duplex apartments",      share = TRUE),
+  list(key = "pct_lowrise_apt",     label = "Low-rise apartments (<5 storeys)", share = TRUE),
+  list(key = "pct_tower",           label = "Towers (5+ storeys)",    share = TRUE),
+  list(key = "median_hh_income",    label = "Median household income", prefix = "$"),
+  list(key = "pct_immigrant",       label = "Immigrants",             share = TRUE),
+  list(key = "pct_non_permanent",   label = "Non-permanent residents", share = TRUE),
+  list(key = "median_age",          label = "Median age"),
+  list(key = "pct_age_0_14",        label = "Children (0-14)",        share = TRUE),
+  list(key = "pct_age_65plus",      label = "Seniors (65+)",          share = TRUE),
+  list(key = "pct_owner",           label = "Homeowners",             share = TRUE),
+  # Diverging red (decline) to blue (growth); bins are [lower, upper)
+  list(key = "pct_pop_change",      label = "Population change since 2016", share = TRUE,
+       bins = c(-Inf, -0.1, -0.02, 0.02, 0.1, 0.5),
+       palette = c("#b2182b", "#ef8a62", "#f7f7f7", "#d1e5f0", "#67a9cf", "#2166ac")),
+  list(key = "percent_demo",      label = "Percentage of Buildings Demolished since 2024", share = TRUE,
+       bins = c(0, 0.01, 0.05, 0.1, 0.33, 1)),
+  list(key = "avg_dwelling_age",    label = "Average dwelling age (est.)", unit = " yrs"),
+  list(key = "pct_hh_couple_kids",    label = "Couples with children",    share = TRUE),
+  list(key = "pct_hh_couple_no_kids", label = "Couples without children", share = TRUE),
+  list(key = "pct_hh_one_parent",     label = "One-parent families",      share = TRUE),
+  list(key = "pct_hh_one_person",     label = "People living alone",      share = TRUE),
+  list(key = "pct_hh_multigen",       label = "Multigenerational households", share = TRUE),
+  list(key = "pct_hh_roommates",      label = "Roommate households",      share = TRUE)
+)
+census_na_colour <- "#d9d9d9"
+
+# Build each stat's palette, per-block colours and legend entries.
+census_layers <- lapply(census_layers, function(layer) {
+  x <- db_census_map[[layer$key]]
+  if (!is.null(layer$bins)) {
+    # Fixed bins with an open top (and optionally an open bottom, -Inf), so a
+    # few tiny, crowded blocks don't wash out the scale
+    b <- layer$bins
+    pal <- colorBin(layer$palette %||% "YlGnBu", domain = NULL, bins = c(b, Inf),
+                    na.color = census_na_colour)
+    layer$colours <- pal(x)
+    layer$legend_colours <- pal(ifelse(is.finite(b), b, b[2] - 1))
+    fmt <- if (isTRUE(layer$share)) label_percent(accuracy = 1) else label_comma()
+    lower <- b
+    upper <- c(b[-1], Inf)
+    layer$legend_labels <- case_when(
+      is.infinite(lower) ~ paste0("< ", fmt(upper)),
+      is.infinite(upper) ~ paste0(fmt(lower), "+"),
+      TRUE ~ paste0(fmt(lower), " – ", fmt(upper))
+    ) |> paste0(layer$unit %||% "")
+  } else {
+    # Continuous scale clipped to the 2nd–98th percentile (0–98th for shares)
+    lims <- unname(quantile(x, c(0.02, 0.98), na.rm = TRUE))
+    if (isTRUE(layer$share)) lims[1] <- 0
+    pal <- colorNumeric("YlGnBu", domain = lims, na.color = census_na_colour)
+    layer$colours <- pal(pmin(pmax(x, lims[1]), lims[2]))
+    breaks <- pretty(lims, n = 5)
+    breaks <- breaks[breaks >= lims[1] & breaks <= lims[2]]
+    layer$legend_colours <- pal(breaks)
+    layer$legend_labels <- if (isTRUE(layer$share)) {
+      percent(breaks, accuracy = 1)
+    } else {
+      paste0(layer$prefix %||% "", comma(breaks), layer$unit %||% "")
+    }
+  }
+  layer
+})
+census_keys   <- vapply(census_layers, `[[`, "", "key")
+census_labels <- vapply(census_layers, `[[`, "", "label")
+census_colours <- setNames(lapply(census_layers, `[[`, "colours"),
+                           paste0("col_", census_keys))
+
+fmt_pct <- function(x) ifelse(is.na(x), "n/a", percent(x, accuracy = 1))
+fmt_num <- function(x, ...) ifelse(is.na(x), "n/a", comma(x, ...))
+
+db_census_map <- db_census_map %>%
+  mutate(popup_census = paste0(
+    "<b>Dissemination block ", DB_UID, "</b><br>",
+    "<span style='color:#666'>Density is for this block; everything else is for its ",
+    "dissemination area (", DA_UID, ").</span><br><br>",
+    "<b>Population:</b> ", fmt_num(db_population), "<br>",
+    "<b>Population change since 2016:</b> ",
+    case_when(is.na(db_pop_2016) ~ "n/a",
+              db_pop_2016 == 0 & db_population > 0 ~ paste0("+", comma(pop_change), " (none in 2016)"),
+              TRUE ~ paste0(ifelse(pop_change >= 0, "+", ""), comma(pop_change), " (",
+                            fmt_pct(pct_pop_change), ")")), "<br>",
+    "<b>Population density:</b> ", fmt_num(pop_density, accuracy = 1), " /km²<br>",
+    "<b>Dwelling density:</b> ", fmt_num(dwelling_density, accuracy = 1), " /km²<br><br>",
+    "<b>Dwelling type</b><br>",
+    "Single-detached: ", fmt_pct(pct_single_detached), "<br>",
+    "Semi-detached: ", fmt_pct(pct_semi_detached), "<br>",
+    "Row house: ", fmt_pct(pct_row_house), "<br>",
+    "Duplex apartment: ", fmt_pct(pct_duplex), "<br>",
+    "Low-rise apartment (<5 storeys): ", fmt_pct(pct_lowrise_apt), "<br>",
+    "Tower (5+ storeys): ", fmt_pct(pct_tower), "<br>",
+    "Average dwelling age (est.): ", fmt_num(avg_dwelling_age, accuracy = 1), " yrs<br><br>",
+    "<b>Household composition</b><br>",
+    "Couples with children: ", fmt_pct(pct_hh_couple_kids), "<br>",
+    "Couples without children: ", fmt_pct(pct_hh_couple_no_kids), "<br>",
+    "One-parent families: ", fmt_pct(pct_hh_one_parent), "<br>",
+    "Living alone: ", fmt_pct(pct_hh_one_person), "<br>",
+    "Multigenerational: ", fmt_pct(pct_hh_multigen), "<br>",
+    "Roommates: ", fmt_pct(pct_hh_roommates), "<br>",
+    "Other family households: ", fmt_pct(pct_hh_other_family), "<br><br>",
+    "<b>Median household income:</b> ", ifelse(is.na(median_hh_income), "n/a", dollar(median_hh_income)), "<br>",
+    "<b>Immigrants:</b> ", fmt_pct(pct_immigrant), "<br>",
+    "<b>Non-permanent residents:</b> ", fmt_pct(pct_non_permanent), "<br>",
+    "<b>Median age:</b> ", fmt_num(median_age, accuracy = 0.1), "<br>",
+    "<b>Children (0-14):</b> ", fmt_pct(pct_age_0_14), "<br>",
+    "<b>Seniors (65+):</b> ", fmt_pct(pct_age_65plus), "<br>",
+    "<b>Owners / renters:</b> ", fmt_pct(pct_owner), " / ", fmt_pct(pct_renter), "<br><br>",
+    "<b>New-build permits since 2024 (this block): ", permits_total, "</b><br>",
+    "<b>Percent of Buildings demolished permits since 2024 (this block): ", percent_demo, "</b><br>",
+    permit_popup_lines
+  ))
+
+# One legend per stat; the onRender JS shows only the active one.
+add_census_legends <- function(map) {
+  for (layer in census_layers) {
+    map <- map |>
+      addLegend(position = "bottomright",
+                colors = c(layer$legend_colours, census_na_colour),
+                labels = c(layer$legend_labels, "No data"),
+                title = layer$label, opacity = 0.7,
+                className = paste0("info legend census-legend legend-", layer$key))
+  }
+  map
+}
+
+permit_map <- leaflet(Edmonton,
+        options = leafletOptions(
+          preferCanvas = TRUE,
+          # Safari's WebKit engine handles the CSS-transform zoom/pan animation
+          # much worse than Chrome/Firefox once thousands of canvas features are
+          # on screen -- it tends to stutter or momentarily lock up mid-animation.
+          # Turning the animation off makes zoom/pan an instant redraw instead,
+          # which is a bit less smooth-looking but far more reliable in Safari.
+          markerZoomAnimation = FALSE,
+          fadeAnimation = FALSE
+        )) |>
+  addTiles(urlTemplate = carto_url, attribution = carto_attr,
+           options = tileOptions(updateWhenZooming = FALSE, updateWhenIdle = TRUE)) |>
+  addFullscreenControl() |>
+  # Census blocks go in before the permits, in the same (default) pane, so
+  # they share one canvas: permit dots draw on top and both stay clickable.
+  addPolygons(
+    data = db_census_map,
+    fillColor = census_layers[[1]]$colours,
+    fillOpacity = 0.6,
+    color = "white",
+    weight = 0.3,
+    popup = ~popup_census,
+    popupOptions = popupOptions(closeOnClick = FALSE, maxHeight = 400),
+    group = "Census blocks",
+    options = do.call(pathOptions, census_colours)
+  ) |>
+  addLegend(
+    data = permits,
+    "bottomright",
+    pal = permit_colour,
+    values = ~`building_type`,
+    title = "Permit Type"
+  ) |> 
+  add_census_legends() |>
+  addCircleMarkers(
+    data = permits,
+    radius = 3,
+    color = ~permit_colour(building_type),
+    stroke = FALSE,
+    fillOpacity = 0.8,
+    group = "Building Permits",
+    popupOptions = popupOptions(closeOnClick = FALSE),
+    options = pathOptions(
+      popup_base = permits$pop_up
+      
+    )
+  ) |> 
+  onRender("
+    function(el, x) {
+      var map = this;
+
+      function updatePopups(mode) {
+        map.eachLayer(function(layer) {
+          if (layer.options && layer.options.popup_base) {
+            var html;
+            if (mode === 'permit') {
+              html = layer.options.popup_base;
+            } else if (mode === 'demo') {
+              html = layer.options.popup_demo;
+            } else if (mode === 'bus') {
+              html = layer.options.pop_up_routes;
+            } else if (mode === 'connect') {
+              html = layer.options.popup_transit;
+            } else {
+              html = layer.options.popup_base;
+            }
+            layer.bindPopup(html, { closeOnClick: false });
+          }
+        });
+      }
+
+      map.on('baselayerchange', function(e) {
+        if (e.name === 'Building Permits') {
+          updatePopups('permit');
+        }
+        if (e.name === 'Demographics') {
+          updatePopups('demo');
+        }
+        if (e.name === 'Bus Stops') {
+          updatePopups('bus');
+        } 
+        if (e.name === 'Transit Connectivity') {
+          updatePopups('connect');
+        }
+      } 
+      );
+
+      map.on('overlayremove', function(e) {
+        updatePopups('base');
+      });
+
+      updatePopups('base');
+    }
+  ") |>
+  # Stats are base groups (radio buttons, one at a time). The groups themselves
+  # are empty; picking one recolours the shared census polygons in onRender.
+  addLayersControl(
+    baseGroups = census_labels,
+    overlayGroups = c("Census blocks", "Building Permits"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) |>
+  hideGroup(census_labels[-1]) |>
+  onRender("
+    function(el, x, data) {
+      var map = this;
+      var active = data.keys[0];
+
+      function showLegend(key) {
+        el.querySelectorAll('.census-legend').forEach(function(lg) {
+          lg.style.display = (key && lg.classList.contains('legend-' + key)) ? '' : 'none';
+        });
+      }
+
+      function recolour(key) {
+        active = key;
+        map.eachLayer(function(layer) {
+          var c = layer.options && layer.options['col_' + key];
+          if (c !== undefined && layer.setStyle) layer.setStyle({ fillColor: c });
+        });
+        showLegend(key);
+      }
+
+      map.on('baselayerchange', function(e) {
+        var i = data.labels.indexOf(e.name);
+        if (i >= 0) recolour(data.keys[i]);
+      });
+      // Hide the legend while the census blocks are switched off
+      map.on('overlayremove', function(e) {
+        if (e.name === 'Census blocks') showLegend(null);
+      });
+      map.on('overlayadd', function(e) {
+        if (e.name === 'Census blocks') showLegend(active);
+      });
+
+      recolour(active);
+    }
+  ", data = list(keys = census_keys, labels = census_labels))
+
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+permit_map
+```
+
