@@ -510,11 +510,28 @@ add_census_legends <- function(map) {
 # Current (2024 bylaw) zoning, grouped into a few broad classes for colour;
 # the popup keeps the full zone code. Zones carry modifiers ("RM h16",
 # "MU h40 f7 cf"), so classes go by the base code before the first space.
-# Simplified with a 2 m tolerance to keep the page light (rmapshaper returns
-# nothing for this layer).
-zoning_map <- zoning %>%
+zoning_valid <- zoning %>%
   st_transform(crs = alberta_crs) %>%
   st_make_valid() %>%
+  mutate(zone_id = row_number())
+
+# Permits (2024+) per zoning polygon and building type, counted against the
+# full-resolution polygons. Only permits with coordinates can be placed.
+zone_permit_counts <- permits %>%
+  filter(!st_is_empty(geometry), !is.na(building_type)) %>%
+  st_transform(crs = alberta_crs) %>%
+  st_join(select(zoning_valid, zone_id), join = st_within) %>%
+  st_drop_geometry() %>%
+  filter(!is.na(zone_id)) %>%
+  count(zone_id, building_type) %>%
+  pivot_wider(names_from = building_type, values_from = n, values_fill = 0)
+
+# Simplified with a 2 m tolerance to keep the page light (rmapshaper returns
+# nothing for this layer).
+zoning_map <- zoning_valid %>%
+  left_join(zone_permit_counts, by = "zone_id") %>%
+  mutate(across(all_of(permit_types), ~ coalesce(.x, 0L)),
+         permits_total = rowSums(across(all_of(permit_types)))) %>%
   st_simplify(preserveTopology = TRUE, dTolerance = 2) %>%
   # Repairs can leave geometry collections, which leaflet can't draw
   st_collection_extract("POLYGON") %>%
@@ -535,7 +552,16 @@ zoning_map <- zoning %>%
            "RL - Large Scale Residential", "MU - Mixed Use", "Commercial",
            "Direct Control", "Other")),
          popup_zoning = paste0("<b>Zone:</b> ", zoning, "<br>",
-                               ifelse(is.na(description), "", description))) %>%
+                               ifelse(is.na(description), "", paste0(description, "<br>")),
+                               "<br><b>New-build permits since 2024 (this area): ",
+                               permits_total, "</b><br>")) %>%
+  mutate(popup_zoning = paste0(
+    popup_zoning,
+    # "Apartment: 2<br>Duplex: 0<br>..." for each zoning polygon
+    st_drop_geometry(.)[permit_types] |>
+      imap(\(n, type) paste0(type, ": ", n, "<br>")) |>
+      reduce(paste0)
+  )) %>%
   select(zoning, zone_class, popup_zoning)
 
 zoning_colour <- colorFactor(
@@ -586,7 +612,7 @@ permit_map <- leaflet(Edmonton,
   ) |>
   addLegend(
     data = zoning_map,
-    position = "bottomright",
+    position = "bottomleft",
     pal = zoning_colour,
     values = ~zone_class,
     title = "Zoning",
@@ -689,16 +715,37 @@ permit_map <- leaflet(Edmonton,
         showLegend(key);
       }
 
+      // Census blocks and zoning are mutually exclusive: switching one on
+      // switches the other off. The swap waits until the layers control has
+      // finished handling the click; otherwise it doesn't refresh its
+      // checkboxes and the next click undoes the swap.
+      var census = map.layerManager.getLayerGroup('Census blocks', false);
+      var zoning = map.layerManager.getLayerGroup('Zoning', false);
+      function swap(show, hide) {
+        setTimeout(function() {
+          if (map.hasLayer(hide)) map.removeLayer(hide);
+          if (!map.hasLayer(show)) map.addLayer(show);
+        }, 0);
+      }
+
       map.on('baselayerchange', function(e) {
         var i = data.labels.indexOf(e.name);
-        if (i >= 0) recolour(data.keys[i]);
+        if (i >= 0) {
+          recolour(data.keys[i]);
+          // Picking a census stat brings the census blocks back over zoning
+          swap(census, zoning);
+        }
       });
       // Hide the legend while the census blocks are switched off
       map.on('overlayremove', function(e) {
         if (e.name === 'Census blocks') showLegend(null);
       });
       map.on('overlayadd', function(e) {
-        if (e.name === 'Census blocks') showLegend(active);
+        if (e.name === 'Census blocks') {
+          showLegend(active);
+          swap(census, zoning);
+        }
+        if (e.name === 'Zoning') swap(zoning, census);
       });
 
       recolour(active);
