@@ -201,30 +201,7 @@ db_census <- get_census(dataset = "CA21", regions = edmonton_csd, level = "DB",
   left_join(da_census, by = "DA_UID") %>%
   st_transform(crs = 4326)
 
-# Population change since 2016, at true block resolution. StatCan doesn't
-# publish 2016 population for 2021 blocks or DAs, and 2016 blocks don't line up
-# exactly with 2021 ones, so 2016 block populations are spread onto 2021 blocks
-# by overlapping area: exact where a block is unchanged, an estimate where it
-# was split or redrawn. The 2016 pull uses the whole CMA so land Edmonton
-# annexed in 2019 still has a 2016 population.
 alberta_crs <- 3400 # NAD83 / Alberta 10-TM (Forest), metres
-db_2016 <- get_census(dataset = "CA16", regions = list(CMA = "48835"), level = "DB",
-                      geo_format = "sf", quiet = TRUE) %>%
-  select(db_pop_2016 = Population) %>%
-  mutate(db_pop_2016 = coalesce(db_pop_2016, 0)) %>%
-  st_transform(alberta_crs) %>%
-  st_make_valid()
-db_census$db_pop_2016 <- st_interpolate_aw(
-  db_2016,
-  st_make_valid(st_transform(db_census, alberta_crs)),
-  extensive = TRUE, keep_NA = TRUE
-)$db_pop_2016 |> round()
-db_census <- db_census %>%
-  mutate(pop_change = db_population - db_pop_2016,
-         # Blocks that were empty in 2016 get Inf, i.e. the top "50%+" bin
-         pct_pop_change = case_when(db_pop_2016 > 0 ~ pop_change / db_pop_2016,
-                                    db_population > 0 ~ Inf,
-                                    TRUE ~ NA_real_))
 
 
 #### Census map layers ####
@@ -442,19 +419,7 @@ census_layers <- list(
   list(key = "pct_age_0_14",        label = "Children (0-14)",        share = TRUE),
   list(key = "pct_age_65plus",      label = "Seniors (65+)",          share = TRUE),
   list(key = "pct_owner",           label = "Homeowners",             share = TRUE),
-  # Diverging red (decline) to blue (growth); bins are [lower, upper)
-  list(key = "pct_pop_change",      label = "Population change since 2016", share = TRUE,
-       bins = c(-Inf, -0.1, -0.02, 0.02, 0.1, 0.5),
-       palette = c("#b2182b", "#ef8a62", "#f7f7f7", "#d1e5f0", "#67a9cf", "#2166ac")),
-  list(key = "percent_demo",      label = "Percentage of Buildings Demolished since 2024", share = TRUE,
-       bins = c(0, 0.01, 0.05, 0.1, 0.33, 1)),
-  list(key = "avg_dwelling_age",    label = "Average dwelling age (est.)", unit = " yrs"),
-  list(key = "pct_hh_couple_kids",    label = "Couples with children",    share = TRUE),
-  list(key = "pct_hh_couple_no_kids", label = "Couples without children", share = TRUE),
-  list(key = "pct_hh_one_parent",     label = "One-parent families",      share = TRUE),
-  list(key = "pct_hh_one_person",     label = "People living alone",      share = TRUE),
-  list(key = "pct_hh_multigen",       label = "Multigenerational households", share = TRUE),
-  list(key = "pct_hh_roommates",      label = "Roommate households",      share = TRUE)
+  list(key = "avg_dwelling_age",    label = "Average dwelling age (est.)", unit = " yrs")
 )
 census_na_colour <- "#d9d9d9"
 
@@ -508,11 +473,6 @@ db_census_map <- db_census_map %>%
     "<span style='color:#666'>Density is for this block; everything else is for its ",
     "dissemination area (", DA_UID, ").</span><br><br>",
     "<b>Population:</b> ", fmt_num(db_population), "<br>",
-    "<b>Population change since 2016:</b> ",
-    case_when(is.na(db_pop_2016) ~ "n/a",
-              db_pop_2016 == 0 & db_population > 0 ~ paste0("+", comma(pop_change), " (none in 2016)"),
-              TRUE ~ paste0(ifelse(pop_change >= 0, "+", ""), comma(pop_change), " (",
-                            fmt_pct(pct_pop_change), ")")), "<br>",
     "<b>Population density:</b> ", fmt_num(pop_density, accuracy = 1), " /km²<br>",
     "<b>Dwelling density:</b> ", fmt_num(dwelling_density, accuracy = 1), " /km²<br><br>",
     "<b>Dwelling type</b><br>",
@@ -523,14 +483,6 @@ db_census_map <- db_census_map %>%
     "Low-rise apartment (<5 storeys): ", fmt_pct(pct_lowrise_apt), "<br>",
     "Tower (5+ storeys): ", fmt_pct(pct_tower), "<br>",
     "Average dwelling age (est.): ", fmt_num(avg_dwelling_age, accuracy = 1), " yrs<br><br>",
-    "<b>Household composition</b><br>",
-    "Couples with children: ", fmt_pct(pct_hh_couple_kids), "<br>",
-    "Couples without children: ", fmt_pct(pct_hh_couple_no_kids), "<br>",
-    "One-parent families: ", fmt_pct(pct_hh_one_parent), "<br>",
-    "Living alone: ", fmt_pct(pct_hh_one_person), "<br>",
-    "Multigenerational: ", fmt_pct(pct_hh_multigen), "<br>",
-    "Roommates: ", fmt_pct(pct_hh_roommates), "<br>",
-    "Other family households: ", fmt_pct(pct_hh_other_family), "<br><br>",
     "<b>Median household income:</b> ", ifelse(is.na(median_hh_income), "n/a", dollar(median_hh_income)), "<br>",
     "<b>Immigrants:</b> ", fmt_pct(pct_immigrant), "<br>",
     "<b>Non-permanent residents:</b> ", fmt_pct(pct_non_permanent), "<br>",
@@ -539,7 +491,6 @@ db_census_map <- db_census_map %>%
     "<b>Seniors (65+):</b> ", fmt_pct(pct_age_65plus), "<br>",
     "<b>Owners / renters:</b> ", fmt_pct(pct_owner), " / ", fmt_pct(pct_renter), "<br><br>",
     "<b>New-build permits since 2024 (this block): ", permits_total, "</b><br>",
-    "<b>Percent of Buildings demolished permits since 2024 (this block): ", percent_demo, "</b><br>",
     permit_popup_lines
   ))
 
@@ -555,6 +506,43 @@ add_census_legends <- function(map) {
   }
   map
 }
+
+# Current (2024 bylaw) zoning, grouped into a few broad classes for colour;
+# the popup keeps the full zone code. Zones carry modifiers ("RM h16",
+# "MU h40 f7 cf"), so classes go by the base code before the first space.
+# Simplified with a 2 m tolerance to keep the page light (rmapshaper returns
+# nothing for this layer).
+zoning_map <- zoning %>%
+  st_transform(crs = alberta_crs) %>%
+  st_make_valid() %>%
+  st_simplify(preserveTopology = TRUE, dTolerance = 2) %>%
+  # Repairs can leave geometry collections, which leaflet can't draw
+  st_collection_extract("POLYGON") %>%
+  st_transform(crs = 4326) %>%
+  mutate(base_zone = str_extract(zoning, "^[^ ]+"),
+         zone_class = case_when(base_zone == "RS"  ~ "RS - Small Scale Residential",
+                                base_zone == "RSF" ~ "RSF - Small Scale Flex Residential",
+                                base_zone == "RSM" ~ "RSM - Small-Medium Scale Residential",
+                                base_zone == "RM"  ~ "RM - Medium Scale Residential",
+                                base_zone == "RL"  ~ "RL - Large Scale Residential",
+                                base_zone == "MU"  ~ "MU - Mixed Use",
+                                base_zone %in% c("CN", "CG", "CB") ~ "Commercial",
+                                base_zone %in% c("DC", "DC1", "DC2") ~ "Direct Control",
+                                TRUE ~ "Other"),
+         zone_class = factor(zone_class, levels = c(
+           "RS - Small Scale Residential", "RSF - Small Scale Flex Residential",
+           "RSM - Small-Medium Scale Residential", "RM - Medium Scale Residential",
+           "RL - Large Scale Residential", "MU - Mixed Use", "Commercial",
+           "Direct Control", "Other")),
+         popup_zoning = paste0("<b>Zone:</b> ", zoning, "<br>",
+                               ifelse(is.na(description), "", description))) %>%
+  select(zoning, zone_class, popup_zoning)
+
+zoning_colour <- colorFactor(
+  palette = c("#fee391", "#fec44f", "#fe9929", "#d95f0e", "#993404",
+              "#e7298a", "#7570b3", "#1b9e77", "#bdbdbd"),
+  domain = zoning_map$zone_class
+)
 
 permit_map <- leaflet(Edmonton,
         # Fill most of the browser window instead of leaflet's default 400px
@@ -584,6 +572,26 @@ permit_map <- leaflet(Edmonton,
     popupOptions = popupOptions(closeOnClick = FALSE, maxHeight = 400),
     group = "Census blocks",
     options = do.call(pathOptions, census_colours)
+  ) |>
+  # Zoning sits above the census blocks (hidden by default); its legend is
+  # tied to the group so it only shows while zoning is switched on.
+  addPolygons(
+    data = zoning_map,
+    fillColor = ~zoning_colour(zone_class),
+    fillOpacity = 0.6,
+    color = "white",
+    weight = 0.3,
+    popup = ~popup_zoning,
+    group = "Zoning"
+  ) |>
+  addLegend(
+    data = zoning_map,
+    position = "bottomright",
+    pal = zoning_colour,
+    values = ~zone_class,
+    title = "Zoning",
+    opacity = 0.7,
+    group = "Zoning"
   ) |>
   addLegend(
     data = permits,
@@ -657,10 +665,10 @@ permit_map <- leaflet(Edmonton,
   # are empty; picking one recolours the shared census polygons in onRender.
   addLayersControl(
     baseGroups = census_labels,
-    overlayGroups = c("Census blocks", "Building Permits"),
+    overlayGroups = c("Census blocks", "Zoning", "Building Permits"),
     options = layersControlOptions(collapsed = FALSE)
   ) |>
-  hideGroup(census_labels[-1]) |>
+  hideGroup(c(census_labels[-1], "Zoning")) |>
   onRender("
     function(el, x, data) {
       var map = this;
