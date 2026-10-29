@@ -11,3 +11,9 @@
 Data/data_raw/*
 
 data/
+# Archived pages and the previous site design (not rendered)
+_archive/
+
+# Map data the published site loads (the data/ rule above would hide it)
+!files/data/
+!docs/files/data/

@@ -18,7 +18,7 @@ Topic Modelling in Political Science - [CSDC/CEDC Winter Methods School](https:/
 
 [Course Materials](https://github.com/RafaelGottardo/Topic-Modelling){.btn .btn-outline-primary .btn role="button"} 
 
-PO479 - Wilfrid Laurier University (Quantitative Casual Inference)
+PO479 - Wilfrid Laurier University (Quantitative Causal Inference)
 
 [Slides](files/teaching/slides/Introduction_to_Quantitative_Causal_Inference.pdf){.btn .btn-outline-primary .btn role="button"} 
 

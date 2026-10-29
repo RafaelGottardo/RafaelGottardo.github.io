@@ -4,6 +4,12 @@ project:
 
 website:
   title: "Rafael Campos-Gottardo"
+  site-url: https://rafael-campos-gottardo.github.io
+  description: "Rafael Campos-Gottardo is a researcher studying public support for housing and housing policy in Canada, using causal inference and spatial analysis."
+  favicon: files/images/favicon.svg
+  image: files/images/rafael_social.jpg
+  open-graph: true
+  twitter-card: true
   navbar:
     tools:
         - icon: linkedin
@@ -11,19 +17,25 @@ website:
         - icon: github
           href: https://github.com/RafaelGottardo
         - icon: bluesky
-          href: https://bsky.app/profile/rafaelgottardo.bsky.social 
+          href: https://bsky.app/profile/rafaelgottardo.bsky.social
     right:
       - href: index.qmd
         text: Home
       - projects.qmd
       - research.qmd
       - teaching.qmd
+      - href: engagement.qmd
+        text: Public Engagement
+      - href: files/static/cv.pdf
+        text: CV
+  page-footer:
+    left: "© 2026 Rafael Campos-Gottardo"
+    right: "Built with [Quarto](https://quarto.org)"
 
 format:
   html:
-    theme: minty
-    css: styles.css 
+    theme: [minty, theme.scss]
+    css: styles.css
     toc: false
 
 editor: visual
-

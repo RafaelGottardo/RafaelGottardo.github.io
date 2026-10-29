@@ -30,6 +30,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./files/images/favicon.svg" rel="icon" type="image/svg+xml">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
@@ -62,6 +63,16 @@ ul.task-list li input[type="checkbox"] {
 
 
 <link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="Rafael Campos-Gottardo - Projects">
+<meta property="og:image" content="https://rafael-campos-gottardo.github.io/files/images/election_results.png">
+<meta property="og:site-name" content="Rafael Campos-Gottardo">
+<meta property="og:image:height" content="1318">
+<meta property="og:image:width" content="1592">
+<meta name="twitter:title" content="Rafael Campos-Gottardo - Projects">
+<meta name="twitter:image" content="https://rafael-campos-gottardo.github.io/files/images/election_results.png">
+<meta name="twitter:image-height" content="1318">
+<meta name="twitter:image-width" content="1592">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="nav-fixed fullcontent">
@@ -96,6 +107,14 @@ ul.task-list li input[type="checkbox"] {
   <li class="nav-item">
     <a class="nav-link" href="./teaching.html" rel="" target="">
  <span class="menu-text">Teaching</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./engagement.html" rel="" target="">
+ <span class="menu-text">Public Engagement</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./files/static/cv.pdf" rel="" target="">
+ <span class="menu-text">CV</span></a>
   </li>  
 </ul>
             <div class="quarto-navbar-tools tools-wide">
@@ -132,22 +151,43 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<div class="columns">
+<div class="columns project-row">
 <div class="column" style="width:60%;">
-<p><img src="files/images/election_results.png" class="img-fluid" alt="Map showing the results of the 2026 Montreal election with bikelanes overlayed on the map"></p>
-</div><div class="column" style="width:40%;">
-<p>This project maps the 2026 Montreal Election Results, and allows users to overlay neighborhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using <strong>R</strong> for data analysis (sf, dplyr) and <strong>Leaflet</strong> for visualization.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="./montreal_election.html"><img src="files/images/election_results.png" class="img-fluid figure-img" alt="Map showing the results of the 2025 Montreal election with bike lanes overlaid on the map"></a></p>
+</figure>
+</div>
+</div><div class="column project-text" style="width:40%;">
+<p>This project maps the 2025 Montreal Election Results, and allows users to overlay neighbourhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using <strong>R</strong> for data analysis (sf, dplyr) and <strong>Leaflet</strong> for visualization.</p>
 <p><em>This is an early prototype</em></p>
 <p><a href="./montreal_election.html" class="btn btn-outline-primary btn" role="button">Available Here</a></p>
 </div>
 </div>
-<div class="columns">
-<div class="column" style="width:40%;">
+<div class="columns project-row">
+<div class="column project-text" style="width:40%;">
 <p>This dashboard shows the impact of the World Cup on BIXI usage in Montreal. It was created using Bixi’s open data and R for data visualization.</p>
 <p><em>This is an early prototype</em></p>
 <p><a href="./bixi-world-cup.html" class="btn btn-outline-primary btn" role="button">Available Here</a></p>
 </div><div class="column" style="width:60%;">
-<p><img src="files/images/world_cup_final_plot.png" class="img-fluid" alt="Map showing the results of the 2026 Montreal election with bikelanes overlayed on the map"></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="./bixi-world-cup.html"><img src="files/images/world_cup_final_plot.png" class="img-fluid figure-img" alt="Line chart comparing BIXI trips during the World Cup final with an average Saturday"></a></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="columns project-row">
+<div class="column" style="width:60%;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="./edmonton_infill.html"><img src="files/images/edmonton_infill.png" class="img-fluid figure-img" alt="Map of Edmonton showing building permits overlaid on census blocks coloured by population density"></a></p>
+</figure>
+</div>
+</div><div class="column project-text" style="width:40%;">
+<p>This project maps building permits for infill housing in Edmonton, overlaid on 2021 Census demographics at the dissemination block level and the city’s zoning map. Users can switch between neighbourhood characteristics such as density, dwelling type, income, and age to see where new infill is being built. This project was created using <strong>R</strong> for data analysis (sf, dplyr, cancensus) and <strong>Leaflet</strong> for visualization.</p>
+<p><em>This is an early prototype</em></p>
+<p><a href="./edmonton_infill.html" class="btn btn-outline-primary btn" role="button">Available Here</a></p>
 </div>
 </div>
 
@@ -388,6 +428,15 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 });
 </script>
 </div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">© 2026 Rafael Campos-Gottardo</div>   
+    <div class="nav-footer-center">
+      &nbsp;
+    </div>
+    <div class="nav-footer-right">Built with <a href="https://quarto.org">Quarto</a></div>
+  </div>
+</footer>
 
 
 

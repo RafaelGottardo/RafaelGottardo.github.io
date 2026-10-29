@@ -76,12 +76,6 @@ permits <- st_transform(permits, crs = 4326)
 permit_colour <- colorFactor(palette = c("orange", "#004D2C", "purple3", "darkblue", "darkred", "black"),
                              domain = permits$building_type)
 
-permits <- permits %>% 
-  mutate(pop_up = paste0("<b>Building Type:</b> ", building_type, "<br>",
-                                    "<b>Description:</b> ", job_description, "<br>",
-                                    "<b>Date:</b> ", permit_date,  "<br>"
-))
-
 #### 2021 Census demographics by dissemination block ####
 # StatCan only publishes population, dwellings and households at the
 # dissemination-block (DB) level. Everything else (dwelling type, income,
@@ -396,11 +390,6 @@ da_permit_counts %>%
   summarise(Income = mean(median_hh_income, na.rm = TRUE),
             Housing_age = mean(avg_dwelling_age, na.rm = TRUE),
             percent_rent = sum(renter, na.rm = TRUE)/sum(tenure_total, na.rm = TRUE))
-# "Apartment: 2<br>Duplex: 0<br>..." for each block
-permit_popup_lines <- st_drop_geometry(db_census_map)[permit_types] |>
-  imap(\(n, type) paste0(type, ": ", n, "<br>")) |>
-  reduce(paste0)
-
 census_layers <- list(
   list(key = "pop_density", label = "Population density",
        bins = c(0, 1000, 2500, 5000, 10000), unit = " /km²"),
@@ -461,38 +450,37 @@ census_layers <- lapply(census_layers, function(layer) {
 })
 census_keys   <- vapply(census_layers, `[[`, "", "key")
 census_labels <- vapply(census_layers, `[[`, "", "label")
-census_colours <- setNames(lapply(census_layers, `[[`, "colours"),
-                           paste0("col_", census_keys))
+# Each stat's colours as a short palette plus a palette index per block, which
+# is much smaller in the page than a full colour string for every block.
+census_colours <- setNames(lapply(census_layers, function(layer) {
+  pal <- unique(layer$colours)
+  list(pal = pal, idx = match(layer$colours, pal) - 1L)
+}), census_keys)
 
-fmt_pct <- function(x) ifelse(is.na(x), "n/a", percent(x, accuracy = 1))
-fmt_num <- function(x, ...) ifelse(is.na(x), "n/a", comma(x, ...))
-
-db_census_map <- db_census_map %>%
-  mutate(popup_census = paste0(
-    "<b>Dissemination block ", DB_UID, "</b><br>",
-    "<span style='color:#666'>Density is for this block; everything else is for its ",
-    "dissemination area (", DA_UID, ").</span><br><br>",
-    "<b>Population:</b> ", fmt_num(db_population), "<br>",
-    "<b>Population density:</b> ", fmt_num(pop_density, accuracy = 1), " /km²<br>",
-    "<b>Dwelling density:</b> ", fmt_num(dwelling_density, accuracy = 1), " /km²<br><br>",
-    "<b>Dwelling type</b><br>",
-    "Single-detached: ", fmt_pct(pct_single_detached), "<br>",
-    "Semi-detached: ", fmt_pct(pct_semi_detached), "<br>",
-    "Row house: ", fmt_pct(pct_row_house), "<br>",
-    "Duplex apartment: ", fmt_pct(pct_duplex), "<br>",
-    "Low-rise apartment (<5 storeys): ", fmt_pct(pct_lowrise_apt), "<br>",
-    "Tower (5+ storeys): ", fmt_pct(pct_tower), "<br>",
-    "Average dwelling age (est.): ", fmt_num(avg_dwelling_age, accuracy = 1), " yrs<br><br>",
-    "<b>Median household income:</b> ", ifelse(is.na(median_hh_income), "n/a", dollar(median_hh_income)), "<br>",
-    "<b>Immigrants:</b> ", fmt_pct(pct_immigrant), "<br>",
-    "<b>Non-permanent residents:</b> ", fmt_pct(pct_non_permanent), "<br>",
-    "<b>Median age:</b> ", fmt_num(median_age, accuracy = 0.1), "<br>",
-    "<b>Children (0-14):</b> ", fmt_pct(pct_age_0_14), "<br>",
-    "<b>Seniors (65+):</b> ", fmt_pct(pct_age_65plus), "<br>",
-    "<b>Owners / renters:</b> ", fmt_pct(pct_owner), " / ", fmt_pct(pct_renter), "<br><br>",
-    "<b>New-build permits since 2024 (this block): ", permits_total, "</b><br>",
-    permit_popup_lines
-  ))
+# Popups are built in the browser (onRender below) from these columns rather
+# than embedding a finished HTML string for every block; percentages are
+# rounded to whole numbers here.
+pct <- function(x) round(x * 100)
+census_popup <- db_census_map %>%
+  st_drop_geometry() %>%
+  transmute(
+    db = DB_UID, da = DA_UID,
+    pop = db_population,
+    pop_density = round(pop_density),
+    dwelling_density = round(dwelling_density),
+    single = pct(pct_single_detached), semi = pct(pct_semi_detached),
+    row = pct(pct_row_house), duplex = pct(pct_duplex),
+    lowrise = pct(pct_lowrise_apt), tower = pct(pct_tower),
+    dwelling_age = round(avg_dwelling_age),
+    income = round(median_hh_income),
+    immigrant = pct(pct_immigrant), non_permanent = pct(pct_non_permanent),
+    median_age = round(median_age, 1),
+    age_0_14 = pct(pct_age_0_14), age_65plus = pct(pct_age_65plus),
+    owner = pct(pct_owner), renter = pct(pct_renter),
+    permits_total
+  ) %>%
+  as.list()
+census_popup$permits <- unname(lapply(permit_types, \(t) db_census_map[[t]]))
 
 # One legend per stat; the onRender JS shows only the active one.
 add_census_legends <- function(map) {
@@ -550,19 +538,29 @@ zoning_map <- zoning_valid %>%
            "RS - Small Scale Residential", "RSF - Small Scale Flex Residential",
            "RSM - Small-Medium Scale Residential", "RM - Medium Scale Residential",
            "RL - Large Scale Residential", "MU - Mixed Use", "Commercial",
-           "Direct Control", "Other")),
-         popup_zoning = paste0("<b>Zone:</b> ", zoning, "<br>",
-                               ifelse(is.na(description), "", paste0(description, "<br>")),
-                               "<br><b>New-build permits since 2024 (this area): ",
-                               permits_total, "</b><br>")) %>%
-  mutate(popup_zoning = paste0(
-    popup_zoning,
-    # "Apartment: 2<br>Duplex: 0<br>..." for each zoning polygon
-    st_drop_geometry(.)[permit_types] |>
-      imap(\(n, type) paste0(type, ": ", n, "<br>")) |>
-      reduce(paste0)
-  )) %>%
-  select(zoning, zone_class, popup_zoning)
+           "Direct Control", "Other"))) %>%
+  select(zoning, zone_class, description, permits_total, all_of(permit_types))
+
+# Zoning popups are built in the browser too. Descriptions repeat across
+# polygons, so each polygon just points at its entry in a list of them.
+zone_descriptions <- unique(na.omit(zoning_map$description))
+zoning_popup <- list(
+  zone = zoning_map$zoning,
+  desc = match(zoning_map$description, zone_descriptions) - 1L,
+  descriptions = zone_descriptions,
+  permits_total = zoning_map$permits_total,
+  permits = unname(lapply(permit_types, \(t) zoning_map[[t]]))
+)
+
+# Only permits with coordinates can go on the map (about half of the 2024+
+# permits have none; they still count in the zoning tables above).
+permits_map <- permits %>%
+  filter(!st_is_empty(geometry))
+permit_popup <- list(
+  type = permits_map$building_type,
+  desc = permits_map$job_description,
+  date = as.character(permits_map$permit_date)
+)
 
 zoning_colour <- colorFactor(
   palette = c("#fee391", "#fec44f", "#fe9929", "#d95f0e", "#993404",
@@ -594,10 +592,9 @@ permit_map <- leaflet(Edmonton,
     fillOpacity = 0.6,
     color = "white",
     weight = 0.3,
-    popup = ~popup_census,
-    popupOptions = popupOptions(closeOnClick = FALSE, maxHeight = 400),
     group = "Census blocks",
-    options = do.call(pathOptions, census_colours)
+    # Row in census_popup / census_colours, used by onRender
+    options = pathOptions(row = seq_len(nrow(db_census_map)) - 1)
   ) |>
   # Zoning sits above the census blocks (hidden by default); its legend is
   # tied to the group so it only shows while zoning is switched on.
@@ -607,8 +604,8 @@ permit_map <- leaflet(Edmonton,
     fillOpacity = 0.6,
     color = "white",
     weight = 0.3,
-    popup = ~popup_zoning,
-    group = "Zoning"
+    group = "Zoning",
+    options = pathOptions(row = seq_len(nrow(zoning_map)) - 1)
   ) |>
   addLegend(
     data = zoning_map,
@@ -628,65 +625,14 @@ permit_map <- leaflet(Edmonton,
   ) |> 
   add_census_legends() |>
   addCircleMarkers(
-    data = permits,
+    data = permits_map,
     radius = 3,
-    color = ~permit_colour(building_type),
+    fillColor = ~permit_colour(building_type),
     stroke = FALSE,
     fillOpacity = 0.8,
     group = "Building Permits",
-    popupOptions = popupOptions(closeOnClick = FALSE),
-    options = pathOptions(
-      popup_base = permits$pop_up
-      
-    )
-  ) |> 
-  onRender("
-    function(el, x) {
-      var map = this;
-
-      function updatePopups(mode) {
-        map.eachLayer(function(layer) {
-          if (layer.options && layer.options.popup_base) {
-            var html;
-            if (mode === 'permit') {
-              html = layer.options.popup_base;
-            } else if (mode === 'demo') {
-              html = layer.options.popup_demo;
-            } else if (mode === 'bus') {
-              html = layer.options.pop_up_routes;
-            } else if (mode === 'connect') {
-              html = layer.options.popup_transit;
-            } else {
-              html = layer.options.popup_base;
-            }
-            layer.bindPopup(html, { closeOnClick: false });
-          }
-        });
-      }
-
-      map.on('baselayerchange', function(e) {
-        if (e.name === 'Building Permits') {
-          updatePopups('permit');
-        }
-        if (e.name === 'Demographics') {
-          updatePopups('demo');
-        }
-        if (e.name === 'Bus Stops') {
-          updatePopups('bus');
-        } 
-        if (e.name === 'Transit Connectivity') {
-          updatePopups('connect');
-        }
-      } 
-      );
-
-      map.on('overlayremove', function(e) {
-        updatePopups('base');
-      });
-
-      updatePopups('base');
-    }
-  ") |>
+    options = pathOptions(row = seq_len(nrow(permits_map)) - 1)
+  ) |>
   # Stats are base groups (radio buttons, one at a time). The groups themselves
   # are empty; picking one recolours the shared census polygons in onRender.
   addLayersControl(
@@ -706,21 +652,87 @@ permit_map <- leaflet(Edmonton,
         });
       }
 
+      var census = map.layerManager.getLayerGroup('Census blocks', false);
+      var zoning = map.layerManager.getLayerGroup('Zoning', false);
+      var permits = map.layerManager.getLayerGroup('Building Permits', false);
+
       function recolour(key) {
         active = key;
-        map.eachLayer(function(layer) {
-          var c = layer.options && layer.options['col_' + key];
-          if (c !== undefined && layer.setStyle) layer.setStyle({ fillColor: c });
+        var c = data.colours[key];
+        census.eachLayer(function(layer) {
+          layer.setStyle({ fillColor: c.pal[c.idx[layer.options.row]] });
         });
         showLegend(key);
       }
+
+      // Popups, built when opened from the columns in data
+      function na(v, s) { return v === null || v === undefined ? 'n/a' : s; }
+      function num(v, digits) {
+        return na(v, Number(v).toLocaleString('en-US', {
+          minimumFractionDigits: digits || 0, maximumFractionDigits: digits || 0 }));
+      }
+      function pct(v) { return na(v, v + '%'); }
+      function permitLines(counts, i) {
+        return data.permit_types.map(function(t, k) {
+          return t + ': ' + counts[k][i] + '<br>';
+        }).join('');
+      }
+
+      var cp = data.census;
+      function censusPopup(i) {
+        return '<b>Dissemination block ' + cp.db[i] + '</b><br>' +
+          '<span style=\"color:#666\">Density is for this block; everything else is for its ' +
+          'dissemination area (' + cp.da[i] + ').</span><br><br>' +
+          '<b>Population:</b> ' + num(cp.pop[i]) + '<br>' +
+          '<b>Population density:</b> ' + num(cp.pop_density[i]) + ' /km²<br>' +
+          '<b>Dwelling density:</b> ' + num(cp.dwelling_density[i]) + ' /km²<br><br>' +
+          '<b>Dwelling type</b><br>' +
+          'Single-detached: ' + pct(cp.single[i]) + '<br>' +
+          'Semi-detached: ' + pct(cp.semi[i]) + '<br>' +
+          'Row house: ' + pct(cp.row[i]) + '<br>' +
+          'Duplex apartment: ' + pct(cp.duplex[i]) + '<br>' +
+          'Low-rise apartment (&lt;5 storeys): ' + pct(cp.lowrise[i]) + '<br>' +
+          'Tower (5+ storeys): ' + pct(cp.tower[i]) + '<br>' +
+          'Average dwelling age (est.): ' + num(cp.dwelling_age[i]) + ' yrs<br><br>' +
+          '<b>Median household income:</b> ' + na(cp.income[i], '$' + num(cp.income[i])) + '<br>' +
+          '<b>Immigrants:</b> ' + pct(cp.immigrant[i]) + '<br>' +
+          '<b>Non-permanent residents:</b> ' + pct(cp.non_permanent[i]) + '<br>' +
+          '<b>Median age:</b> ' + num(cp.median_age[i], 1) + '<br>' +
+          '<b>Children (0-14):</b> ' + pct(cp.age_0_14[i]) + '<br>' +
+          '<b>Seniors (65+):</b> ' + pct(cp.age_65plus[i]) + '<br>' +
+          '<b>Owners / renters:</b> ' + pct(cp.owner[i]) + ' / ' + pct(cp.renter[i]) + '<br><br>' +
+          '<b>New-build permits since 2024 (this block): ' + cp.permits_total[i] + '</b><br>' +
+          permitLines(cp.permits, i);
+      }
+
+      var zp = data.zoning;
+      function zoningPopup(i) {
+        var d = zp.desc[i];
+        return '<b>Zone:</b> ' + zp.zone[i] + '<br>' +
+          (d === null ? '' : zp.descriptions[d] + '<br>') +
+          '<br><b>New-build permits since 2024 (this area): ' + zp.permits_total[i] + '</b><br>' +
+          permitLines(zp.permits, i);
+      }
+
+      var pp = data.permits;
+      function permitPopup(i) {
+        return '<b>Building Type:</b> ' + pp.type[i] + '<br>' +
+          '<b>Description:</b> ' + pp.desc[i] + '<br>' +
+          '<b>Date:</b> ' + pp.date[i] + '<br>';
+      }
+
+      [[census, censusPopup, { closeOnClick: false, maxHeight: 400 }],
+       [zoning, zoningPopup, {}],
+       [permits, permitPopup, { closeOnClick: false }]].forEach(function(g) {
+        g[0].eachLayer(function(layer) {
+          layer.bindPopup(function(l) { return g[1](l.options.row); }, g[2]);
+        });
+      });
 
       // Census blocks and zoning are mutually exclusive: switching one on
       // switches the other off. The swap waits until the layers control has
       // finished handling the click; otherwise it doesn't refresh its
       // checkboxes and the next click undoes the swap.
-      var census = map.layerManager.getLayerGroup('Census blocks', false);
-      var zoning = map.layerManager.getLayerGroup('Zoning', false);
       function swap(show, hide) {
         setTimeout(function() {
           if (map.hasLayer(hide)) map.removeLayer(hide);
@@ -750,7 +762,13 @@ permit_map <- leaflet(Edmonton,
 
       recolour(active);
     }
-  ", data = list(keys = census_keys, labels = census_labels))
+  ", data = list(keys = census_keys, labels = census_labels,
+                 colours = census_colours, census = census_popup,
+                 zoning = zoning_popup, permits = permit_popup,
+                 permit_types = permit_types))
+
+# Write at most 5 decimals (~1 m) to the page instead of full precision
+attr(permit_map$x, "TOJSON_ARGS") <- list(digits = 5, use_signif = FALSE)
 
 
 ```

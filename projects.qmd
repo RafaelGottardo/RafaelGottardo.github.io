@@ -2,13 +2,13 @@
 title: "Projects"
 ---
 
-::::: columns
+::::: {.columns .project-row}
 ::: {.column width="60%"}
-![](files/images/election_results.png){fig-alt="Map showing the results of the 2026 Montreal election with bikelanes overlayed on the map"}
+[![](files/images/election_results.png){fig-alt="Map showing the results of the 2025 Montreal election with bike lanes overlaid on the map"}](montreal_election.qmd)
 :::
 
-::: {.column width="40%"}
-This project maps the 2026 Montreal Election Results, and allows users to overlay neighborhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using **R** for data analysis (sf, dplyr) and **Leaflet** for visualization.
+::: {.column .project-text width="40%"}
+This project maps the 2025 Montreal Election Results, and allows users to overlay neighbourhood characteristics onto the results. Election results are mapped at the polling station level and coloured by the winner of that polling station. This project was created using **R** for data analysis (sf, dplyr) and **Leaflet** for visualization.
 
 *This is an early prototype*
 
@@ -16,24 +16,30 @@ This project maps the 2026 Montreal Election Results, and allows users to overla
 :::
 :::::
 
-
-
-
-
-
-
-
-
-::::: columns
-::: {.column width="40%"}
-
+::::: {.columns .project-row}
+::: {.column .project-text width="40%"}
 This dashboard shows the impact of the World Cup on BIXI usage in Montreal. It was created using Bixi's open data and R for data visualization.
 
 *This is an early prototype*
 
 [Available Here](bixi-world-cup.qmd){.btn .btn-outline-primary .btn role="button"}
 :::
+
 ::: {.column width="60%"}
-![](files/images/world_cup_final_plot.png){fig-alt="Map showing the results of the 2026 Montreal election with bikelanes overlayed on the map"}
+[![](files/images/world_cup_final_plot.png){fig-alt="Line chart comparing BIXI trips during the World Cup final with an average Saturday"}](bixi-world-cup.qmd)
+:::
+:::::
+
+::::: {.columns .project-row}
+::: {.column width="60%"}
+[![](files/images/edmonton_infill.png){fig-alt="Map of Edmonton showing building permits overlaid on census blocks coloured by population density"}](edmonton_infill.qmd)
+:::
+
+::: {.column .project-text width="40%"}
+This project maps building permits for infill housing in Edmonton, overlaid on 2021 Census demographics at the dissemination block level and the city's zoning map. Users can switch between neighbourhood characteristics such as density, dwelling type, income, and age to see where new infill is being built. This project was created using **R** for data analysis (sf, dplyr, cancensus) and **Leaflet** for visualization.
+
+*This is an early prototype*
+
+[Available Here](edmonton_infill.qmd){.btn .btn-outline-primary .btn role="button"}
 :::
 :::::

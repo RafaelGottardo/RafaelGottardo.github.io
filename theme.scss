@@ -1,0 +1,84 @@
+/*-- scss:defaults --*/
+
+// Fonts: a serif for headings, a clean sans-serif for body text. To try a
+// different pairing, change the Google Fonts URL and the two font stacks.
+$web-font-path: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap";
+$font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+$headings-font-family: "Source Serif 4", Georgia, serif;
+$headings-font-weight: 600;
+
+// Near-black text; mint stays for the header and small accents
+$mint: #78c2ad;
+$mint-dark: #3f8f78;
+$ink: #1f2328;
+$muted: #5b6168;
+
+$body-color: $ink;
+$headings-color: $ink;
+$link-color: $ink;
+$link-hover-color: $mint-dark;
+$line-height-base: 1.7;
+
+/*-- scss:rules --*/
+
+// Dark links with a mint underline
+main a:not(.btn):not(.card-link) {
+  text-decoration: underline;
+  text-decoration-color: $mint;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  font-weight: 500;
+}
+
+main a:not(.btn):not(.card-link):hover {
+  color: $mint-dark;
+}
+
+h1, h2, h3, .title {
+  letter-spacing: -0.01em;
+}
+
+.btn-outline-primary {
+  color: $ink;
+  border-color: $ink;
+}
+
+.btn-outline-primary:hover {
+  color: #fff;
+  background-color: $mint-dark;
+  border-color: $mint-dark;
+}
+
+// Small uppercase label above a section, with a mint square
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  color: $muted;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  background: $mint;
+}
+
+.nav-footer {
+  color: $muted;
+  font-size: 0.875rem;
+}
+
+// Header, buttons and other UI text stay in the sans-serif
+.navbar, .btn, .nav-footer {
+  font-family: $font-family-sans-serif;
+}
+
+.navbar-title {
+  font-weight: 500;
+}
