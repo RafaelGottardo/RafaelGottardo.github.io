@@ -4,7 +4,7 @@ project:
 
 website:
   title: "Rafael Campos-Gottardo"
-  site-url: https://rafael-campos-gottardo.github.io
+  site-url: https://rafaelgottardo.github.io
   description: "Rafael Campos-Gottardo is a researcher studying public support for housing and housing policy in Canada, using causal inference and spatial analysis."
   favicon: files/images/favicon.svg
   image: files/images/rafael_social.jpg
