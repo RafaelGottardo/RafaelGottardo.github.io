@@ -64,7 +64,7 @@ winner <- winner %>%
                                              "DUVAL Jean Indépendant" ~ "Indépendant: Jean Duval",
                                              "SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé" ~ "Transition Montréal: Craig Sauvé",
                                              "KACOU Jean-François Futur Montréal" ~ "Futur Montréal: Jean-François Kacou",
-                                             "LE ROUGETEL Katy Indépendant" ~ "Idépendant: Katy Le Rougetel"
+                                             "LE ROUGETEL Katy Indépendant" ~ "Indépendant: Katy Le Rougetel"
                                              ))
 
 
@@ -75,7 +75,7 @@ winner <- winner %>%
            "Indépendant: Jean Duval" = "DUVAL Jean Indépendant",
            "Transition Montréal: Craig Sauvé" = "SAUVÉ Craig Transition Montréal - Équipe Craig Sauvé",
            "Futur Montréal: Jean-François Kacou" = "KACOU Jean-François Futur Montréal",
-          "Idépendant: Katy Le Rougetel" = "LE ROUGETEL Katy Indépendant")
+          "Indépendant: Katy Le Rougetel" = "LE ROUGETEL Katy Indépendant")
 
 test <- winner %>% 
   filter(`Canadidate and Party` == "Indépendant: Jean Duval")
@@ -259,7 +259,7 @@ popup_candidates <- c(
   "Futur Montréal - Jean-François Kacou" = "Futur Montréal: Jean-François Kacou",
   "Ensemble Montréal - Soraya Martinez Ferrada" = "Ensemble Montréal: Soraya Martinez Ferrada",
   "Projet Montréal - Luc Rabouin" = "Projet Montréal: Luc Rabouin",
-  "Indépendant - Katy Le Rougetel" = "Idépendant: Katy Le Rougetel",
+  "Indépendant - Katy Le Rougetel" = "Indépendant: Katy Le Rougetel",
   "Transition Montréal - Craig Sauvé" = "Transition Montréal: Craig Sauvé",
   "Action Montréal - Gilbert Thibodeau" = "Action Montréal: Gilbert Thibodeau"
 )
@@ -282,22 +282,35 @@ popup_data$votes <- unname(lapply(popup_candidates, \(col) shp[[col]]))
 popup_data$candidates <- names(popup_candidates)
 
 
-shp <- shp %>% 
+# Each winner's party colour, in the order the legend lists them. Ensemble
+# uses the pink of Soraya Martinez Ferrada's campaign; the other parties use
+# Wikipedia's colours for the 2025 election. Futur Montréal's branding is
+# also blue, so it gets a light blue to stay distinct from Projet; independents
+# are shades of grey.
+party_colours <- c(
+  "Ensemble Montréal: Soraya Martinez Ferrada" = "#E6007E",
+  "Projet Montréal: Luc Rabouin" = "#1C4E8E",
+  "Transition Montréal: Craig Sauvé" = "#FF4F19",
+  "Futur Montréal: Jean-François Kacou" = "#4FB3E8",
+  "Action Montréal: Gilbert Thibodeau" = "#88C812",
+  "Indépendant: Katy Le Rougetel" = "#A6A6A6",
+  "Indépendant: Jean Duval" = "#6E6E6E",
+  "No Votes" = "#E0E0E0"
+)
+
+# The map is drawn from shp_proj, so the factor has to be set there
+shp_proj <- shp_proj %>%
   mutate(`Canadidate and Party` = factor(`Canadidate and Party`,
-                                         levels = c("Ensemble Montréal: Soraya Martinez Ferrada",
-                                                    "Projet Montréal: Luc Rabouin",
-                                                    "Transition Montréal: Craig Sauvé",
-                                                     "Futur Montréal: Jean-François Kacou",
-                                                    "Action Montréal: Gilbert Thibodeau",
-                                                    "Idépendant: Katy Le Rougetel",
-                                                    "Indépendant: Jean Duval",
-                                                    "No Votes"
-          )))
+                                         levels = names(party_colours)))
 
 pal <- colorFactor(
-  palette = c("yellow3", "hotpink", "#3a9694", "darkblue", "#ff4f19", "grey30"),
-  domain = shp$`Canadidate and Party`
+  palette = unname(party_colours),
+  levels = names(party_colours),
+  ordered = TRUE
 )
+
+# Legend lists only the winners that appear on the map, in factor order
+legend_parties <- levels(droplevels(shp_proj$`Canadidate and Party`))
 
 pal_parking <- colorFactor(
   palette = c("#00e5ff", "#ffd700", "#ff00ff"),
@@ -401,8 +414,9 @@ election_map <- leaflet(shp_proj, width = "100%", height = "85vh") |>
   ) |>
   addLegend(
     "bottomright",
-    pal = pal,
-    values = ~`Canadidate and Party`,
+    colors = unname(party_colours[legend_parties]),
+    labels = legend_parties,
+    opacity = 0.8,
     title = "Party"
   ) %>%
   addLegend(
