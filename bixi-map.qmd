@@ -1,0 +1,413 @@
+---
+title: "Bixi rides by arrondissement"
+format:
+  html:
+    page-layout: full
+execute:
+  echo: false
+---
+
+```{=html}
+<!--
+How it fits together:
+  - `prep-data` (R, runs at render): reads the files written by
+    scripts/prep_map_data.R and hands them to the browser with ojs_define().
+  - `{ojs}` cells: draw the map with Leaflet. No R runs in the reader's browser.
+-->
+```
+
+```{r}
+#| label: prep-data
+#| message: false
+library(readr)
+
+ojs_define(
+  rides_data = read_csv("bixi-map/data/arrondissement_rides.csv", show_col_types = FALSE),
+  boundaries_text = read_file("bixi-map/data/boundaries.geojson"),
+  stations_text = read_file("bixi-map/data/stations.json")
+)
+```
+
+```{=html}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  #bixi-map { height: 72vh; min-height: 480px; background: #fff; }
+  .map-legend {
+    background: #fff; padding: 8px 10px; border-radius: 6px; line-height: 1.5;
+    font-size: 0.8rem; color: #1f2a30; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+  .map-legend-title { font-weight: 600; margin-bottom: 2px; }
+  .map-legend-swatch {
+    display: inline-block; width: 14px; height: 14px; border-radius: 2px;
+    margin-right: 6px; vertical-align: -2px;
+  }
+  .map-legend-dots { display: flex; align-items: flex-end; gap: 10px; }
+  .map-legend-dots > div { text-align: center; }
+  .map-legend-dots svg { display: block; margin: 0 auto 2px; }
+  .map-back {
+    background: #fff; border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer;
+    font-size: 0.85rem; color: #1f2a30; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  }
+  .map-back:hover { background: #f1f1ee; }
+  .station-card { color: #1f2a30; font-size: 0.82rem; line-height: 1.4; }
+  .station-card .card-title { font-weight: 600; font-size: 0.95rem; }
+  .station-card .card-year { color: #5f6b72; margin-bottom: 6px; }
+  .station-card .card-season {
+    font-weight: 600; margin-top: 8px; padding-top: 6px; border-top: 1px solid #e4e4e0;
+  }
+  .station-card .card-stat { font-weight: 600; margin: 2px 0 4px; }
+  .station-card .card-label { color: #5f6b72; margin-top: 4px; }
+  .station-card .card-note {
+    color: #5f6b72; font-size: 0.75rem; margin-top: 8px; padding-top: 6px;
+    border-top: 1px solid #e4e4e0;
+  }
+  .basemap-tiles { filter: grayscale(1) brightness(1.06); opacity: 0.6; }
+  .data-note { color: #5f6b72; font-size: 0.85rem; line-height: 1.5; max-width: 760px; margin-top: 1rem; }
+
+  /* Phones: a taller map, and a smaller legend and card so they don't cover it */
+  @media (max-width: 600px) {
+    #bixi-map { height: 78vh; min-height: 420px; }
+    .map-legend { font-size: 0.7rem; padding: 6px 8px; line-height: 1.35; }
+    .map-legend-swatch { width: 11px; height: 11px; margin-right: 4px; }
+    .map-back { font-size: 0.8rem; padding: 5px 8px; }
+    .station-card { font-size: 0.78rem; }
+    .data-note { font-size: 0.8rem; }
+  }
+</style>
+```
+
+```{ojs}
+//| output: false
+L = require("leaflet@1.9.4")
+
+rides = transpose(rides_data)
+boundaries = JSON.parse(boundaries_text)
+years = Array.from(new Set(rides.map(d => d.year))).sort((a, b) => b - a)
+winterYears = new Set(rides.filter(d => d.rides_winter != null).map(d => d.year))
+
+stationColumns = JSON.parse(stations_text)
+stations = stationColumns.year.map((_, i) => {
+  const station = {}
+  for (const column of Object.keys(stationColumns)) station[column] = stationColumns[column][i]
+  station.rides = station.rides_summer
+  return station
+})
+
+function escapeHtml(text) {
+  const holder = document.createElement("div")
+  holder.textContent = text
+  return holder.innerHTML
+}
+
+function count(value) {
+  return value.toLocaleString("en-CA")
+}
+
+// Same rule as name_key() in scripts/prep_map_data.R, to find a station again in another year
+function nameKey(name) {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ").replace(/\bsainte\b/g, "ste").replace(/\bsaint\b/g, "st")
+    .trim().split(" ").sort().join(" ")
+}
+
+// Station names in each year, to tell a renamed station from one still there under its name
+keysByYear = d3.rollup(stations, group => new Set(group.map(d => nameKey(d.name))), d => d.year)
+
+function topStationRow(label, name, trips, total) {
+  const detail = name == null
+    ? "None"
+    : `${escapeHtml(name)} (${count(trips)} rides, ${(trips / total * 100).toFixed(1)}%)`
+  return `<div class="card-label">${label}</div><div>${detail}</div>`
+}
+
+function seasonDetails(station, season) {
+  const started = station[`rides_${season}`]
+  const ended = station[`ended_${season}`]
+  if (started === 0 && ended === 0) return `<div>No ${season} rides</div>`
+  return `<div class="card-stat">${count(started)} rides started</div>` +
+    topStationRow("Most common destination", station[`top_destination_${season}`],
+                  station[`top_destination_n_${season}`], started) +
+    topStationRow("Most common start location", station[`top_origin_${season}`],
+                  station[`top_origin_n_${season}`], ended)
+}
+
+// Dates each season covers in the data. 2023 opened early (April 12) and its winter season
+// started November 16; the 2026 data stops at the end of August
+seasonDates = new Map([
+  [2023, {summer: "Apr 12 – Nov 15", winter: "Nov 16 – Dec 31"}],
+  [2024, {summer: "Apr 15 – Nov 15", winter: "Jan 1 – Apr 14 and Nov 16 – Dec 31"}],
+  [2025, {summer: "Apr 15 – Nov 15", winter: "Jan 1 – Apr 14 and Nov 16 – Dec 31"}],
+  [2026, {summer: "Apr 15 – Aug 31", winter: "Jan 1 – Apr 14"}]
+])
+
+function stationCard(station) {
+  const hasWinter = winterYears.has(station.year)
+  const body = hasWinter
+    ? `<div class="card-season">Summer (${seasonDates.get(station.year).summer})</div>` +
+      seasonDetails(station, "summer") +
+      `<div class="card-season">Winter (${seasonDates.get(station.year).winter})</div>` +
+      seasonDetails(station, "winter")
+    : seasonDetails(station, "summer")
+  const roundTrips = hasWinter
+    ? `${count(station.round_trips_summer)} in summer, ${count(station.round_trips_winter)} in winter`
+    : count(station.round_trips_summer)
+  return `<div class="station-card">` +
+    `<div class="card-title">${escapeHtml(station.name)}</div>` +
+    `<div class="card-year">${station.year}</div>${body}` +
+    `<div class="card-note">Round trips excluded from most common stations: ${roundTrips}.</div></div>`
+}
+
+// "summer rides" only means something in years that also had a winter season
+function ridesWord(forYear) {
+  return winterYears.has(forYear) ? "summer rides" : "rides"
+}
+function capitalise(text) {
+  return text[0].toUpperCase() + text.slice(1)
+}
+
+// Fixed across years, so switching years shows real growth. Each step is about 3x the last
+rideBreaks = [3000, 10000, 30000, 100000, 300000, 1000000]
+rideColours = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
+rideLabels = ["Under 3k", "3k – 10k", "10k – 30k", "30k – 100k", "100k – 300k", "300k – 1M", "Over 1M"]
+noStationsColour = "#efefec"
+hoverColour = "#1f2a30"
+dotColour = "#256abf"
+
+function rideColour(value) {
+  if (value == null) return noStationsColour
+  return rideColours[rideBreaks.filter(limit => value >= limit).length]
+}
+
+// Dot area shows rides, on one scale for every year. The smallest dots stay big enough to hover
+rideMax = Math.max(...stations.map(d => d.rides))
+function rideRadius(value) {
+  return Math.max(4, 22 * Math.sqrt(value / rideMax))
+}
+```
+
+```{ojs}
+viewof year = Inputs.select(years, {label: "Year", value: 2025, format: String})
+```
+
+```{ojs}
+mapElement = html`<div id="bixi-map"></div>`
+```
+
+```{ojs}
+//| output: false
+// Built once. Changing the year or the selected area updates it instead of rebuilding it
+mapParts = {
+  while (!document.body.contains(mapElement)) await Promises.delay(20)
+
+  const map = L.map(mapElement, {zoomSnap: 0.25, maxZoom: 16})
+  map.attributionControl.setPrefix(false)
+  map.createPane("stations").style.zIndex = 450
+
+  // OpenStreetMap's standard tiles, greyed and faded (see .basemap-tiles) so they stay behind
+  // the data. Fine for a personal site; heavy traffic needs a tile provider instead
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, className: "basemap-tiles",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map)
+  const narrow = mapElement.clientWidth < 600
+
+  let currentYear = null
+  let selected = null
+  let yearRides = new Map()
+  let openStation = null      // the station that was clicked; the card follows it across years
+  let shownKey = null         // the station the card shows in the current year
+  let dotLayers = new Map()
+
+  const card = L.popup({
+    maxWidth: narrow ? Math.min(280, mapElement.clientWidth - 40) : 320,
+    minWidth: narrow ? 200 : 240,
+    autoPanPaddingTopLeft: narrow ? [10, 10] : [50, 20],
+    autoPanPaddingBottomRight: narrow ? [10, 10] : [230, 130]
+  })
+  map.on("popupclose", event => {
+    if (event.popup !== card) return
+    openStation = null
+    shownKey = null
+    styleDots()
+  })
+
+  function areaStyle(shape) {
+    const name = shape.feature.properties.arrondissement
+    // An open area is clear so its streets show through; the rest are greyed out
+    if (selected === name) return {color: hoverColour, weight: 2, fillColor: "#fff", fillOpacity: 0}
+    if (selected !== null) return {color: "#fff", weight: 1, fillColor: noStationsColour, fillOpacity: 0.75}
+    const row = yearRides.get(name)
+    return {color: "#fff", weight: 1, fillColor: rideColour(row ? row.rides_summer : null), fillOpacity: 0.9}
+  }
+
+  const areas = L.geoJSON(boundaries, {
+    onEachFeature: (feature, shape) => {
+      shape.bindTooltip("", {sticky: true})
+      shape.on("mouseover", () => shape.setStyle({color: hoverColour, weight: 2}).bringToFront())
+      shape.on("mouseout", () => {
+        shape.setStyle(areaStyle(shape))
+        if (selectedShape()) selectedShape().bringToFront()
+      })
+      shape.on("click", () => {
+        if (selected === feature.properties.arrondissement) return
+        selected = feature.properties.arrondissement
+        map.closePopup(card)
+        refresh()
+        map.fitBounds(shape.getBounds(), {padding: [24, 24]})
+      })
+    }
+  }).addTo(map)
+  const allBounds = areas.getBounds()
+  map.fitBounds(allBounds)
+
+  function selectedShape() {
+    return areas.getLayers().find(shape => shape.feature.properties.arrondissement === selected)
+  }
+
+  const dots = L.layerGroup().addTo(map)
+
+  const legendBox = L.DomUtil.create("div", "map-legend")
+  const legend = L.control({position: "bottomright"})
+  legend.onAdd = () => legendBox
+  legend.addTo(map)
+
+  const backButton = L.DomUtil.create("button", "map-back")
+  backButton.type = "button"
+  backButton.textContent = "← All areas"
+  backButton.style.display = "none"
+  L.DomEvent.disableClickPropagation(backButton)
+  backButton.addEventListener("click", () => {
+    selected = null
+    map.closePopup(card)
+    refresh()
+    map.fitBounds(allBounds)
+  })
+  const back = L.control({position: "topright"})
+  back.onAdd = () => backButton
+  back.addTo(map)
+
+  function drawLegend() {
+    const word = capitalise(ridesWord(currentYear))
+    if (selected === null) {
+      const rows = rideLabels.map((label, i) => [rideColours[i], label]).reverse()
+      rows.push([noStationsColour, "No stations"])
+      legendBox.innerHTML = `<div class="map-legend-title">${word}</div>` + rows.map(([colour, label]) =>
+        `<div><span class="map-legend-swatch" style="background:${colour}"></span>${label}</div>`).join("")
+    } else {
+      const sizes = [[10000, "10k"], [50000, "50k"], [100000, "100k"]]
+      legendBox.innerHTML = `<div class="map-legend-title">${word} per station</div>` +
+        `<div class="map-legend-dots">` + sizes.map(([value, label]) => {
+          const r = rideRadius(value)
+          return `<div><svg width="${2 * r + 2}" height="${2 * r + 2}"><circle cx="${r + 1}" cy="${r + 1}" r="${r}" fill="${dotColour}" fill-opacity="0.8" stroke="#fff"></circle></svg>${label}</div>`
+        }).join("") + `</div>`
+    }
+  }
+
+  function dotStyle(key) {
+    return shownKey === key
+      ? {color: hoverColour, weight: 2}
+      : {color: "#fff", weight: 1}
+  }
+
+  function styleDots() {
+    dotLayers.forEach((dot, key) => dot.setStyle(dotStyle(key)))
+  }
+
+  function showCard(latLng, content) {
+    card.setLatLng(latLng).setContent(content)
+    if (!map.hasLayer(card)) card.openOn(map)
+  }
+
+  function showStation(station) {
+    shownKey = nameKey(station.name)
+    showCard([station.lat, station.lon], stationCard(station))
+    styleDots()
+  }
+
+  function openCard(station) {
+    openStation = {key: nameKey(station.name), name: station.name, year: station.year,
+                   latLng: [station.lat, station.lon]}
+    showStation(station)
+  }
+
+  // Which clicked-year station a station in another year continues. Normally its own name, but
+  // if a clicked-year station within 30 m disappeared under its old name, the station there is
+  // that one renamed (2026's "Place Gérald-Godin" continues 2025's "Utilités publiques")
+  function continues(candidate) {
+    const clickedYear = stations.filter(d => d.year === openStation.year)
+    const closest = d3.least(clickedYear, d => map.distance([d.lat, d.lon], [candidate.lat, candidate.lon]))
+    const metres = map.distance([closest.lat, closest.lon], [candidate.lat, candidate.lon])
+    if (metres <= 30 && !keysByYear.get(candidate.year).has(nameKey(closest.name))) return nameKey(closest.name)
+    return nameKey(candidate.name)
+  }
+
+  function drawDots() {
+    dots.clearLayers()
+    dotLayers = new Map()
+    if (selected === null) return
+    const visible = stations
+      .filter(d => d.year === currentYear && d.arrondissement === selected)
+      .sort((a, b) => b.rides - a.rides)       // small dots drawn last so they stay reachable
+    visible.forEach(d => {
+      const key = nameKey(d.name)
+      const dot = L.circleMarker([d.lat, d.lon], {
+        pane: "stations", bubblingMouseEvents: false, radius: rideRadius(d.rides),
+        fillColor: dotColour, fillOpacity: 0.8, ...dotStyle(key)
+      })
+      dot.bindTooltip(`<strong>${escapeHtml(d.name)}</strong><br>${count(d.rides)} ${ridesWord(currentYear)}`)
+      dot.on("mouseover", () => dot.setStyle({color: hoverColour, weight: 2}))
+      dot.on("mouseout", () => dot.setStyle(dotStyle(key)))
+      dot.on("click", () => openCard(d))
+      dots.addLayer(dot)
+      dotLayers.set(key, dot)
+    })
+
+    // An open card follows the year change to the station that continues the clicked one.
+    // If there isn't one, it says there was no station at that spot that year
+    if (openStation) {
+      shownKey = null
+      const same = d3.least(visible.filter(d => continues(d) === openStation.key),
+                            d => map.distance(openStation.latLng, [d.lat, d.lon]))
+      if (same) {
+        showStation(same)
+      } else {
+        showCard(openStation.latLng, `<div class="station-card">` +
+          `<div class="card-title">${escapeHtml(openStation.name)}</div>` +
+          `<div>No station at this spot in ${currentYear}</div></div>`)
+      }
+    }
+  }
+
+  function refresh() {
+    areas.eachLayer(shape => {
+      const name = shape.feature.properties.arrondissement
+      const row = yearRides.get(name)
+      shape.setStyle(areaStyle(shape))
+      shape.setTooltipContent(row
+        ? `<strong>${name}</strong><br>${count(row.rides_summer)} ${ridesWord(currentYear)}`
+        : `<strong>${name}</strong><br>No stations in ${currentYear}`)
+    })
+    if (selectedShape()) selectedShape().bringToFront()
+    backButton.style.display = selected === null ? "none" : "block"
+    drawDots()
+    drawLegend()
+  }
+
+  function setYear(newYear) {
+    currentYear = newYear
+    yearRides = new Map(rides.filter(d => d.year === newYear).map(d => [d.arrondissement, d]))
+    refresh()
+  }
+
+  return {setYear}
+}
+```
+
+```{ojs}
+//| output: false
+mapParts.setYear(year)
+```
+
+::: data-note
+**About the data.** Trips from BIXI Montréal's open data, 2014 to August 2026, counted at the station where they start. Summer is April 15 to November 15. BIXI's winter service began on November 16, 2023, so earlier years only have summer rides. Areas are coloured, and stations sized, by summer rides. About 0.6% of trips were left out: trips with no end station or invalid coordinates, trips at BIXI's internal test and warehouse stations, and trips in Sherbrooke. Within each year, stations with the same name or within 1 m of each other are shown as one. Boundaries from the Ville de Montréal's open data and © OpenStreetMap contributors.
+:::

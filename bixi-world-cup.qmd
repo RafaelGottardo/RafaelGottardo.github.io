@@ -2,13 +2,17 @@
 title: "BIXIing to the World Cup"
 subtitle: "How did bike share use in Montréal change during World Cup matches?"
 author: "Rafael Campos-Gottardo"
-date: "2026-10"
+date: "October 2026"
 format:
   html:
     page-layout: article
 execute:
   echo: false
 ---
+
+*How did the World Cup impact Bike share usage in a Canadian city that did not host any matches?*
+
+I examine the number of Bixi trips, before, during, and after two important FIFA World Cup matches. Canada's final game against Morocco and the the World Cup final game. Despite 
 
 ```{=html}
 <!--
