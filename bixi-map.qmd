@@ -165,13 +165,14 @@ function capitalise(text) {
   return text[0].toUpperCase() + text.slice(1)
 }
 
-// Fixed across years, so switching years shows real growth. Each step is about 3x the last
+// Fixed across years, so switching years shows real growth. Each step is about 3x the last.
+// A light-to-dark ramp around BIXI red (#D52B1E, the fifth step)
 rideBreaks = [3000, 10000, 30000, 100000, 300000, 1000000]
-rideColours = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
+rideColours = ["#fde3e1", "#f9bab5", "#f28c84", "#e65c51", "#ee3124", "#a51f15", "#70140d"]
 rideLabels = ["Under 3k", "3k – 10k", "10k – 30k", "30k – 100k", "100k – 300k", "300k – 1M", "Over 1M"]
 noStationsColour = "#efefec"
 hoverColour = "#1f2a30"
-dotColour = "#256abf"
+dotColour = "#ee3124"
 
 function rideColour(value) {
   if (value == null) return noStationsColour

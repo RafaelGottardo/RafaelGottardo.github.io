@@ -12,7 +12,13 @@ execute:
 
 *How did the World Cup impact Bike share usage in a Canadian city that did not host any matches?*
 
-I examine the number of Bixi trips, before, during, and after two important FIFA World Cup matches. Canada's final game against Morocco and the the World Cup final game. Despite 
+Inspired by a project examining [Bike Share activity during World Cup match days in Toronto](https://schoolofcities.github.io/fifa-world-cup-2026/bike-share-toronto) I examine the number of Bixi trips, before, during, and after two important FIFA World Cup matches. Canada's final game against Morocco and the the World Cup final game. Despite not hosting a World Cup game Montreal still came together for the World Cup.
+
+This dashboard shows how many Montrealers used Bixi to get around during the World Cup, with many using the service to get to and from bars and unofficial fan zones. 
+
+I also calculate the number of trips started and ended within 1km of the [17 bars](https://www.mtl.org/en/experience/fifa-world-cup) recommeded by *Tourisme Montréal* to watch the World Cup. For the World Cup final I also calculate the number of trips started and ended within 1km of the [Just for Laugh's fan zone](https://montreal.citynews.ca/2026/07/17/just-for-laughs-fifa-world-cup-watch-party-montreal/) at Place des Festivals.  
+
+# Checkout how the World Cup Impacted Bixi Rides
 
 ```{=html}
 <!--
@@ -71,7 +77,10 @@ matches <- matches %>%
 # filled with 0, so filler rows without a time are dropped first.
 trips <- read.csv("data/match_day.csv") %>%
   filter(!is.na(match_id), !is.na(Start_time_mins)) %>%
-  transmute(match_id, area,
+  # The Just for Laughs watch party wasn't an official FIFA fan zone
+  transmute(match_id,
+            area   = recode(area, "Within 1km of Official Fan Zone" =
+                                    "Within 1km of Unofficial Fan Zone"),
             series = ifelse(Day == "Match Day", "Match day", "Baseline"),
             minute = hhmm_to_min(Start_time_mins),
             trips  = Number_of_trips) %>%
@@ -125,7 +134,6 @@ ojs_define(
                        vertical-align: middle; margin-right: 6px; }
 </style>
 ```
-
 
 Select which stations to include, and hover over a chart to compare the match day to the baseline in 10-minute blocks.
 
@@ -236,8 +244,32 @@ html`${matches.map(m => html`<div class="card mb-4">
 
 ## Data & Methods
 
+### Data
 
+Ride data was drawn from Bixi's [open data portal](https://bixi.com/en/open-data/).
+
+### Smoothing
+
+Lines represent the number of rides per minute smoothed to 15 minute intervals. 
+
+### Baseline Comparison
+
+For Canada's game against Morrocco on Saturday, July 4, 2026 the baseline is the average rides per minute for Saturday June 6, 13, 20, and 27, 2026. 
+
+For the World Cup final on Sunday, July 19, 2026 the baseline represents the average number of rides per minute for the four proceeding Sundays, June 21 and 28, and July 5 and 12, 2026. 
+
+### Spatial filtering
+
+For the recommended bars the list was drawn from [*Tourisme Montréal's*](https://www.mtl.org/en/experience/fifa-world-cup) list of 17 recommended bars and cafes to watch the World Cup. These bars include the Pub Burgundy Lion, Station des Sports, Time Out Market Montreal, Bar L'Barouf, Bar St-Laurent Frappé, Les Enfants du Rock, Café Club Social, Café Olimpico, Bishop & Bagg, Caffè Italia, Café Marinelli, Café Gelato, Café Sportivo, Bocadillo Bistro, Café Conca d'oro, Carnitas Michoacanas Leoncito, and Bruno Sport Bar. 
+
+This data encompasses the start time of all trips started or ended at the 341 stations within 1km of the address coordinates for each bar or cafe. 
+
+For the World Cup final the [Just for Laugh's fan zone](https://montreal.citynews.ca/2026/07/17/just-for-laughs-fifa-world-cup-watch-party-montreal/) was used as the "unofficial fan zone".
+
+This data encompasses the start time of all trips started or ended at the 89 stations within 1km of a fixed reference point for the *Place des Festivals*. 
+
+Station distances were computed by projecting station coordinates and the reference point into WGS 84 (EPSG:4326) and calculating straightline distance in metres. 
 
 ------------------------------------------------------------------------
 
-*Data: Bixi open data.*
+*Data: [Bixi open data](https://bixi.com/en/open-data/).*
